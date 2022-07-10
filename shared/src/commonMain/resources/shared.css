@@ -1,0 +1,97 @@
+* {
+    background-color: lightgray;
+    color: black;
+}
+
+.hidden {
+    display: none;
+}
+
+.centered-content {
+    margin: 0 auto;
+    max-width: 250px;
+    text-align: center;
+}
+
+.responsive-canvas {
+    width: 100%;
+    max-width: 1000px;
+}
+
+.text {
+    text-align: left;
+    font-family: "Lucida Console", monospace;
+}
+
+button {
+    text-align: center;
+    font-family: "Monaco", monospace;
+    font-weight: bold;
+}
+
+#hamburger-icon {
+    display: none;
+}
+
+#script-holder {
+    width: 100%;
+    margin: 0;
+}
+
+#phone-menu, #desktop-menu {
+    text-align: left;
+    font-family: "Monaco", monospace;
+    min-width: 200px;
+}
+
+#phone-menu {
+    z-index: 5;
+    position: absolute;
+    top: 40px;
+    left: 5px;
+    border-style: solid;
+    border-radius: 10px;
+    border-width: thin;
+}
+
+@media only screen and (min-width: 600px) {
+    #phone-menu {
+        display: none;
+    }
+}
+
+@media only screen and (max-width: 600px) {
+    #desktop-menu {
+        display: none;
+    }
+}
+
+@media only screen and (max-width: 600px) {
+    #content-holder {
+        width: 100%;
+    }
+}
+
+@media only screen and (min-width: 600px) and (max-width: 850px) {
+    #content-holder {
+        width: 65%;
+    }
+}
+
+@media only screen and (min-width: 850px) and (max-width: 1050px) {
+    #content-holder {
+        width: 75%;
+    }
+}
+
+@media only screen and (min-width: 600px) {
+    .phone-element {
+        display: none;
+    }
+}
+
+@media only screen and (max-width: 600px) {
+    #hamburger-icon {
+        display: block;
+    }
+}
