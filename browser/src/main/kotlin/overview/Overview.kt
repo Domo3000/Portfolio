@@ -36,8 +36,7 @@ val Overview = FC<Props> {
             id = "content-holder"
             css {
                 width = 80.pct
-                maxWidth = 1200.px
-                minHeight = 400.px
+                minHeight = 600.px
                 float = Float.left
             }
             state.component {}

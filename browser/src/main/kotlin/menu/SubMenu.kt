@@ -44,7 +44,7 @@ external interface SubMenuProps : Props {
 
 abstract class SubMenu<S: SubmenuState>(private val initialSubState: S) { // TODO type needed?
     abstract val text: String
-    abstract val matchingState: KClass<S> // untested. if doesn't work: out SubmenuState
+    abstract val matchingState: KClass<S>
     abstract val elements: List<SubmenuState>
 
     val create: FC<SubMenuProps>

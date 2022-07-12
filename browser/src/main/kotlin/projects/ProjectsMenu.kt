@@ -1,11 +1,11 @@
 package projects
 
-import aboutme.AboutMeStates
 import menu.SubMenu
 import menu.SubmenuState
 import projects.automaton.AutomatonOverview
 import projects.connect4.Connect4Overview
 import projects.kdtree.KdTreeOverview
+import projects.shuffle.ShuffleOverview
 import react.FC
 import react.Props
 
@@ -15,12 +15,17 @@ object ProjectStates {
     object KdTree : ProjectState {
         override val text: String = "KdTree"
         override val component: FC<Props>
-            get() = KdTreeOverview
+            get() = KdTreeOverview.create
     }
     object Automaton: ProjectState {
         override val text: String = "Automaton"
         override val component: FC<Props>
-            get() = AutomatonOverview
+            get() = AutomatonOverview.create
+    }
+    object Shuffle: ProjectState {
+        override val text: String = "\"Shuffling\""
+        override val component: FC<Props>
+            get() = ShuffleOverview.create
     }
     object Connect4: ProjectState {
         override val text: String = "Connect4"
@@ -28,7 +33,7 @@ object ProjectStates {
             get() = Connect4Overview
     }
 
-    val states = listOf(KdTree, Automaton, Connect4)
+    val states = listOf(KdTree, Automaton, Shuffle, Connect4)
 }
 
 object ProjectsMenu : SubMenu<ProjectState>(ProjectStates.KdTree) {
