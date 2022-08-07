@@ -1,5 +1,3 @@
-package structures
-
 sealed class Orientation(private val name: String) {
     override fun toString(): String = name
 
@@ -61,7 +59,7 @@ private fun Node?.insertOrNew(newPosition: RelativePosition, orientation: Orient
 fun rebalance(root: Node, orientation: Orientation = Horizontal): Node =
     rebalance(root.toList().map { it.position }, orientation)
 
-fun rebalance(positions: List<RelativePosition>, orientation: Orientation): Node {
+private fun rebalance(positions: List<RelativePosition>, orientation: Orientation): Node {
     val sortedPositions = when (orientation) {
         Horizontal -> positions.sortedBy { it.y }
         Vertical -> positions.sortedBy { it.x }

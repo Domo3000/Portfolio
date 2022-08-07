@@ -1,6 +1,3 @@
-package projects.kdtree
-
-import Classnames
 import canvas.drawBackground
 import canvas.resetDimensions
 import csstype.Float
@@ -8,26 +5,18 @@ import csstype.NamedColor
 import csstype.pct
 import csstype.px
 import emotion.react.css
-import kotlinx.browser.document
-import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
+import react.ExternalCanvas
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.canvas
 import react.dom.html.ReactHTML.div
-import react.useEffect
-import structures.*
+import react.useEffectOnce
 import kotlin.random.Random
-
-private const val borderWidth = 1.0
-private const val ratio = 3.0 / 4.0
-
-external interface CanvasProps : Props {
-    var tree: Node?
-}
 
 private fun drawRules(canvasElement: HTMLCanvasElement, renderingContext: CanvasRenderingContext2D) {
     renderingContext.fillStyle = NamedColor.black
@@ -47,93 +36,105 @@ private fun drawRules(canvasElement: HTMLCanvasElement, renderingContext: Canvas
     )
 }
 
+// TODO cleanup more like Shuffle
 private fun draw(tree: Node?, canvasElement: HTMLCanvasElement, renderingContext: CanvasRenderingContext2D) {
-    canvasElement.resetDimensions(ratio)
+    canvasElement.resetDimensions()
     renderingContext.drawBackground()
     tree?.draw(canvasElement, renderingContext) ?: drawRules(canvasElement, renderingContext)
 }
 
-val Canvas = FC<CanvasProps> { props ->
-    val elementId = "layout-canvas"
-    var orientation: Orientation = Horizontal
+class KdTree : ExternalCanvas() {
+    override val name: String = "KdTree"
 
-    val canvasElement by lazy { document.getElementById(elementId) as HTMLCanvasElement }
+    override val component: FC<Props>
+        get() = FC {
+            var orientation: Orientation = Horizontal
+            var tree: Node? = null
 
-    val renderingContext: CanvasRenderingContext2D by lazy { canvasElement.getContext("2d") as CanvasRenderingContext2D }
-
-    window.addEventListener("resize", {
-        draw(props.tree, canvasElement, renderingContext)
-    })
-
-    window.addEventListener("keypress", { event ->
-        when ((event as KeyboardEvent).key.lowercase()) {
-            "b" -> {
+            val balance: () -> Unit = {
                 orientation = orientation.switch()
-                props.tree = rebalance(props.tree!!, orientation)
-                draw(props.tree, canvasElement, renderingContext)
+                if (tree != null) {
+                    tree = rebalance(tree!!, orientation)
+                    draw(tree, canvasElement, renderingContext)
+                }
             }
-            "c" -> {
-                props.tree = null
-                draw(props.tree, canvasElement, renderingContext)
-            }
-        }
-    })
 
-    div {
-        canvas {
-            className = Classnames.responsiveCanvas
-            id = elementId
-            //width = 800.0
-            //height = 600.0
-            onClick = {
-                if (props.tree == null || props.tree!!.size() < 1000) {
-                    val bounds = canvasElement.getBoundingClientRect()
-                    val x = ((it.clientX - bounds.left) / canvasElement.width.toDouble() * 100.0).toInt()
-                    val y = ((it.clientY - bounds.top) / canvasElement.height.toDouble() * 100.0).toInt()
-                    if (x > 1 && y > 1 && x < 99 && y < 99) {
-                        if (props.tree == null) {
-                            props.tree = Node(RelativePosition(x, y), Horizontal)
-                        } else {
-                            props.tree = props.tree!!.insert(RelativePosition(x, y))
+            val clear: () -> Unit = {
+                tree = null
+                draw(tree, canvasElement, renderingContext)
+            }
+
+            val resizeHandler: (Event) -> Unit = {
+                draw(tree, canvasElement, renderingContext)
+            }
+
+            val keypressHandler: (Event) -> Unit = { event ->
+                when ((event as KeyboardEvent).key.lowercase()) {
+                    "b" -> balance()
+                    "c" -> clear()
+                }
+            }
+
+            canvas {
+                className = Classnames.responsiveCanvas
+                id = canvasId
+                onClick = {
+                    if (tree == null || tree!!.size() < 1000) {
+                        val bounds = canvasElement.getBoundingClientRect()
+                        val x = ((it.clientX - bounds.left) / canvasElement.width.toDouble() * 100.0).toInt()
+                        val y = ((it.clientY - bounds.top) / canvasElement.height.toDouble() * 100.0).toInt()
+                        if (x > 0 && y > 0 && x < 100 && y < 100) {
+                            if (tree == null) {
+                                tree = Node(RelativePosition(x, y), orientation)
+                            } else {
+                                tree = tree!!.insert(RelativePosition(x, y))
+                            }
+                            draw(tree, canvasElement, renderingContext)
                         }
-                        draw(props.tree, canvasElement, renderingContext)
                     }
                 }
             }
-        }
-    }
 
-    div {
-        className = Classnames.phoneElement
-        button {
-            +"Balance"
-            css {
-                width = 50.pct
-                padding = 15.px
-                float = Float.left
+            // TODO reuse buttons from shuffle
+            div {
+                className = Classnames.phoneElement
+                button {
+                    +"Balance"
+                    css {
+                        width = 50.pct
+                        padding = 15.px
+                        float = Float.left
+                    }
+                    onClick = {
+                        balance()
+                    }
+                }
+                button {
+                    +"Clear"
+                    css {
+                        width = 50.pct
+                        padding = 15.px
+                        float = Float.left
+                    }
+                    onClick = {
+                        clear()
+                    }
+                }
             }
-            onClick = {
-                orientation = orientation.switch()
-                props.tree = rebalance(props.tree!!, orientation)
-                draw(props.tree, canvasElement, renderingContext)
-            }
-        }
-        button {
-            +"Clear"
-            css {
-                width = 50.pct
-                padding = 15.px
-                float = Float.left
-            }
-            onClick = {
-                props.tree = null
-                draw(props.tree, canvasElement, renderingContext)
-            }
-        }
-    }
 
-    useEffect {
-        draw(props.tree, canvasElement, renderingContext)
+            useEffectOnce {
+                addEventListener("resize" to resizeHandler)
+                addEventListener("keypress" to keypressHandler)
+                draw(tree, canvasElement, renderingContext)
+            }
+        }
+
+    override fun cleanUp() {}
+
+    override fun initialize() {}
+
+    init {
+        initEventListeners()
     }
 }
 
@@ -172,7 +173,7 @@ private fun Node.draw(
     val offset = 1.0
     val lineWidth = 2.0
 
-    val random by lazy { Random(hashCode()) }
+    val random = Random(hashCode())
 
     renderingContext2D.fillStyle = pseudoRandomColor(random)
 

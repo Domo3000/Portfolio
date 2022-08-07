@@ -1,8 +1,7 @@
 package overview
 
 import Classnames
-import csstype.Float
-import csstype.pct
+import csstype.*
 import emotion.react.css
 import react.FC
 import react.Props
@@ -41,6 +40,16 @@ val Header = FC<HeaderProps> { props ->
 
     div {
         id = "phone-menu"
+        css {
+            zIndex = integer(5)
+            position = Position.absolute
+            top = 40.px
+            left = 5.px
+            borderStyle = LineStyle.solid
+            borderRadius = 10.px
+            borderWidth = LineWidth.thin
+            overflow = Overflow.hidden
+        }
         if (collapsed) {
             className = Classnames.hidden
         }

@@ -27,16 +27,16 @@ object ProjectStates {
         override val component: FC<Props>
             get() = ShuffleOverview.create
     }
-    object Connect4: ProjectState {
+    object Connect4: ProjectState { // Deactivated for now
         override val text: String = "Connect4"
         override val component: FC<Props>
-            get() = Connect4Overview
+            get() = Connect4Overview.create
     }
 
-    val states = listOf(KdTree, Automaton, Shuffle, Connect4)
+    val states = listOf(KdTree, Automaton, Shuffle)
 }
 
-object ProjectsMenu : SubMenu<ProjectState>(ProjectStates.KdTree) {
+object ProjectsMenu : SubMenu(ProjectStates.KdTree) {
     override val text: String = "Projects"
     override val matchingState = ProjectState::class
     override val elements: List<SubmenuState> = ProjectStates.states

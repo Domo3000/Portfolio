@@ -15,6 +15,7 @@
 
 .responsive-canvas {
     width: 100%;
+    max-width: 1000px;
 }
 
 .text {
@@ -41,17 +42,6 @@ button {
     text-align: left;
     font-family: "Monaco", monospace;
     min-width: 200px;
-}
-
-#phone-menu {
-    z-index: 5;
-    position: absolute;
-    top: 40px;
-    left: 5px;
-    border-style: solid;
-    border-radius: 10px;
-    border-width: thin;
-    overflow: hidden;
 }
 
 @media only screen and (min-width: 600px) {

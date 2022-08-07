@@ -1,6 +1,7 @@
 package overview
 
 import aboutme.AboutMeMenu
+import aboutpage.AboutPageMenu
 import csstype.Float
 import csstype.px
 import emotion.react.css
@@ -23,6 +24,11 @@ val Menu = FC<MenuProps> { props ->
         }
 
         AboutMeMenu.create {
+            currentState = props.currentState
+            setState = { props.stateSetter(it) }
+        }
+
+        AboutPageMenu.create {
             currentState = props.currentState
             setState = { props.stateSetter(it) }
         }

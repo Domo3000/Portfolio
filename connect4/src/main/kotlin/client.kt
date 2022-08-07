@@ -1,14 +1,18 @@
 import kotlinx.browser.document
-import org.w3c.dom.events.Event
 import react.create
 import react.dom.client.hydrateRoot
 
 fun main() {
-    document.dispatchEvent(Event("Connect4Init")) // TODO in browser disable menu until init
+    val state = Connect4State()
 
     document.addEventListener("Connect4", {
+        state.reset()
         document.getElementById("external-holder")?.let {
-            hydrateRoot(it, Connect4.create())
+            hydrateRoot(it, x(state).create())
         }
+    })
+
+    document.addEventListener("Connect4Cleanup", {
+        state.reset()
     })
 }

@@ -1,9 +1,7 @@
-package structures
-
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class KdTreeTest {
+class KdtreeTest {
 
     @Test
     fun singleNode() {

@@ -1,12 +1,16 @@
 package overview
 
 import aboutme.AboutMeStates
-import csstype.*
+import csstype.Float
+import csstype.pct
+import csstype.px
 import emotion.react.css
-import react.*
+import react.FC
+import react.Props
 import react.dom.html.ReactHTML.div
+import react.useState
 
-interface OverviewState  {
+interface OverviewState {
     val component: FC<Props>
 }
 

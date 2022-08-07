@@ -10,14 +10,14 @@ allprojects {
     }
 
     tasks.withType<JavaCompile> {
-        sourceCompatibility = "18"
-        targetCompatibility = "18"
+        sourceCompatibility = "16"
+        targetCompatibility = "16"
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions {
             freeCompilerArgs = listOf("-Xcontext-receivers")
-            jvmTarget = "18"
+            jvmTarget = "16"
         }
     }
 }

@@ -24,7 +24,7 @@ object AboutMeStates {
     val states = listOf(Intro, Impressum)
 }
 
-object AboutMeMenu : SubMenu<AboutMeState>(AboutMeStates.Intro) {
+object AboutMeMenu : SubMenu(AboutMeStates.Intro) {
     override val text: String = "About me"
     override val matchingState = AboutMeState::class
     override val elements: List<SubmenuState> = AboutMeStates.states

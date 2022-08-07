@@ -10,9 +10,10 @@ import sockets.Connection
 import utils.logInfo
 
 context(Connect4, ApplicationEnvironment)
-fun Routing.createConnect4Websocket() = run {
+fun Routing.createConnect4Websocket() =
     webSocket("/connect4") {
         val connection = Connection(this)
+        var closed = false
         add(connection)
         send(ConnectedMessage(connection.id).encode())
         logInfo("connected $connection")
@@ -39,4 +40,3 @@ fun Routing.createConnect4Websocket() = run {
             logInfo("$this disconnected")
         }
     }
-}

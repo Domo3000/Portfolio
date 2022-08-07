@@ -3,9 +3,12 @@ package projects
 import Classnames
 import csstype.*
 import emotion.react.css
+import kotlinx.browser.document
+import org.w3c.dom.events.Event
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML
+import react.useEffectOnce
 import react.useState
 
 sealed interface ProjectSubState
@@ -67,4 +70,18 @@ abstract class ProjectOverview {
                 }
             }
         }
+}
+
+fun externalCanvas(name: String): FC<Props> = FC {
+    ReactHTML.div {
+        id = "external-holder"
+    }
+
+    useEffectOnce {
+        document.dispatchEvent(Event(name))
+
+        cleanup {
+            document.dispatchEvent(Event("${name}Cleanup"))
+        }
+    }
 }

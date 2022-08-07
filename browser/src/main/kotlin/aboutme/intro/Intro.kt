@@ -9,7 +9,10 @@ import react.dom.html.ReactHTML.p
 val IntroComponent = FC<Props> {
     div {
         className = Classnames.text
-        +"Welcome, this page is under construction!"
+
+        p {
+            +"Welcome, this page is under construction!"
+        }
 
         p {
             +"Dominik Leys"

@@ -13,13 +13,11 @@ application {
 }
 
 dependencies {
-    //val coroutineVersion = findProperty("coroutineVersion")
     val ktorVersion = findProperty("ktorVersion")
 
     implementation(project(":shared"))
     implementation(project(":shared-connect4"))
 
-    //implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVersion")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-websockets:$ktorVersion")
     implementation("io.ktor:ktor-server-html-builder:$ktorVersion")
@@ -36,11 +34,20 @@ tasks.withType<ShadowJar> {
     archiveBaseName.set("portfolio")
     archiveClassifier.set("")
     archiveVersion.set("")
-    for(element in listOf("browser", "connect4")) {
-        dependsOn(":$element:browserProductionWebpack")
-        val js = tasks.getByPath(":$element:browserProductionWebpack") as KotlinWebpack
+
+    val debug = System.getenv("DEBUG")
+    val environment = if(debug == "true") {
+        "Development"
+    } else {
+        "Production"
+    }
+
+    for(element in listOf("browser", "kdtree", "shuffle")) {
+        dependsOn(":$element:browser${environment}Webpack")
+        val js = tasks.getByPath(":$element:browser${environment}Webpack") as KotlinWebpack
         from(File(js.destinationDirectory, js.outputFileName))
     }
+    minimize()
 }
 
 tasks.getByName<JavaExec>("run") {
