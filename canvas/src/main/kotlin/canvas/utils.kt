@@ -4,6 +4,14 @@ import csstype.NamedColor
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 
+fun HTMLCanvasElement.getElementWidth(size: Int, lineWidth: Double = 1.0) = (width - 2 * lineWidth) / size
+
+fun HTMLCanvasElement.getRelativeX(x: Int, size: Int, lineWidth: Double = 1.0) = lineWidth + x * getElementWidth(size, lineWidth)
+
+fun HTMLCanvasElement.getElementHeight(size: Int, lineWidth: Double = 1.0) = (height - 2 * lineWidth) / size
+
+fun HTMLCanvasElement.getRelativeY(y: Int, size: Int, lineWidth: Double = 1.0) = lineWidth + y * getElementHeight(size, lineWidth)
+
 fun HTMLCanvasElement.resetBitmapSize() {
     width = getBoundingClientRect().width.toInt()
 }

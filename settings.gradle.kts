@@ -8,11 +8,11 @@ pluginManagement {
 rootProject.name = "Portfolio"
 
 include(":shared")
-include(":shared-canvas")
-include(":shared-client")
-include(":browser")
+//include(":shared-canvas")
 include(":shared-connect4")
-include(":connect4")
-include(":shuffle")
-include(":kdtree")
+include(":browser")
+//include(":shared-canvas")
+include(":canvas:automaton")
+include(":canvas:kdtree")
+include(":canvas:shuffle")
 include(":server")
