@@ -4,7 +4,14 @@ class Deck(var elements: List<Int>) {
 
     constructor(size: Int) : this((1..size).toList())
 
-    fun sorted(): Boolean = this == Deck(size)
+    fun sorted(): Boolean {
+        elements.forEachIndexed { i, e ->
+            if (e != (i + 1)) {
+                return false
+            }
+        }
+        return true
+    }
 
     fun randomize(): Deck {
         elements = elements.shuffled()
@@ -22,12 +29,9 @@ class Deck(var elements: List<Int>) {
 
     fun pile(n: Int): Deck {
         val builder = Array(n) { mutableListOf<Int>() }
-        var count = 0
-        var remainingElements = elements
 
-        while (remainingElements.isNotEmpty()) {
-            builder[count++ % n].add(remainingElements[0])
-            remainingElements = remainingElements.drop(1)
+        elements.forEachIndexed { i, e ->
+            builder[i % n].add(e)
         }
 
         elements = builder.toList().flatten()

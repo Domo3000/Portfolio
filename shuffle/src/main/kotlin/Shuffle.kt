@@ -82,7 +82,7 @@ class Shuffle : ExternalCanvas() {
 
     override val component: FC<Props>
         get() = FC {
-            val (deckSizeState, setDeckSizeState) = useState(52) // TODO better name (deckSizeSlider? too long)
+            val (deckSizeState, setDeckSizeState) = useState(52)
             val (shufflerState, setShufflerState) = useState(2)
             val (delayState, setDelayState) = useState(200)
             val (loopState, setLoopState) = useState(false)
@@ -122,16 +122,8 @@ class Shuffle : ExternalCanvas() {
                 onChange = {
                     clearLoop()
                     setDeckSizeState(it.target.value.toDouble().toInt())
-                    val max = run {
-                        val maybe = (deckSizeState / 2)
-                        if (maybe <= 1) {
-                            2
-                        } else {
-                            maybe
-                        }
-                    }
-                    if (shufflerState > max) {
-                        setShufflerState(max)
+                    if (shufflerState > deckSizeState) {
+                        setShufflerState(deckSizeState)
                     }
                 }
             }
@@ -145,7 +137,7 @@ class Shuffle : ExternalCanvas() {
                 id = "shuffler-input"
                 type = InputType.range
                 min = 2.0
-                max = (deckSizeState / 2).toDouble()
+                max = deckSizeState.toDouble()
                 step = 1.0
                 value = shufflerState.toDouble().toString()
                 css {
