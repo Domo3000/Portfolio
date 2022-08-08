@@ -86,7 +86,7 @@ class About : ExternalCanvas() {
             val (state, _) = useState(Array(size) { y -> Array(size) { Counter(Deck(y + 2), 0, false) } })
             val unfinished =
                 Array(size) { y -> Array(size) { x -> y to x }.toList() }.toList().flatten().toMutableList()
-            val total = (((size + 1) / 2) * (size + 1))
+            val total = (((size) / 2.0) * (size + 1)).toInt()
 
             fun draw() {
                 renderingContext.drawBackground()
