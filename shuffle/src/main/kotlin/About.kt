@@ -86,6 +86,7 @@ class About : ExternalCanvas() {
             val (state, _) = useState(Array(size) { y -> Array(size) { Counter(Deck(y + 2), 0, false) } })
             val unfinished =
                 Array(size) { y -> Array(size) { x -> y to x }.toList() }.toList().flatten().toMutableList()
+            val total = (((size + 1) / 2) * (size + 1))
 
             fun draw() {
                 renderingContext.drawBackground()
@@ -125,20 +126,14 @@ class About : ExternalCanvas() {
                 }
             }
 
-            fun runSteps(repetitions: Int) = unfinished.forEach { (y, x) ->
-                step(x, y, repetitions)
-            }
-
             fun runStep() {
-                when (unfinished.size) {
-                    0 -> clearInterval()
-                    in 1..((size / 2) * size / 2) -> runSteps(5 * 1 / (1 - (finished / ((size / 2) * (size + 1)))))
-                    else -> runRandomSteps(500, 10)
-                }
-
+                runRandomSteps(500, 10)
                 setHaveFinished(finished)
-
                 draw()
+
+                if(unfinished.isEmpty()) {
+                    clearInterval()
+                }
             }
 
             val resizeHandler: (Event) -> Unit = {
@@ -281,7 +276,7 @@ class About : ExternalCanvas() {
                     }
                 } else {
                     ReactHTML.p {
-                        +"$haveFinished have finished!"
+                        +"$haveFinished/$total have finished!"
                     }
                 }
             }
