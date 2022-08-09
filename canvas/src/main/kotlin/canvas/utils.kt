@@ -6,11 +6,19 @@ import org.w3c.dom.HTMLCanvasElement
 
 fun HTMLCanvasElement.getElementWidth(size: Int, lineWidth: Double = 1.0) = (width - 2 * lineWidth) / size
 
-fun HTMLCanvasElement.getRelativeX(x: Int, size: Int, lineWidth: Double = 1.0) = lineWidth + x * getElementWidth(size, lineWidth)
+fun HTMLCanvasElement.getX(x: Double, size: Int, lineWidth: Double = 1.0) =
+    ((x - lineWidth) / getElementWidth(size, lineWidth)).toInt()
+
+fun HTMLCanvasElement.getRelativeX(x: Int, size: Int, lineWidth: Double = 1.0) =
+    lineWidth + x * getElementWidth(size, lineWidth)
 
 fun HTMLCanvasElement.getElementHeight(size: Int, lineWidth: Double = 1.0) = (height - 2 * lineWidth) / size
 
-fun HTMLCanvasElement.getRelativeY(y: Int, size: Int, lineWidth: Double = 1.0) = lineWidth + y * getElementHeight(size, lineWidth)
+fun HTMLCanvasElement.getY(y: Double, size: Int, lineWidth: Double = 1.0) =
+    ((y - lineWidth) / getElementHeight(size, lineWidth)).toInt()
+
+fun HTMLCanvasElement.getRelativeY(y: Int, size: Int, lineWidth: Double = 1.0) =
+    lineWidth + y * getElementHeight(size, lineWidth)
 
 fun HTMLCanvasElement.resetBitmapSize() {
     width = getBoundingClientRect().width.toInt()

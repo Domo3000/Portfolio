@@ -8,10 +8,9 @@ pluginManagement {
 rootProject.name = "Portfolio"
 
 include(":shared")
-//include(":shared-canvas")
+include(":canvas")
 include(":shared-connect4")
 include(":browser")
-//include(":shared-canvas")
 include(":canvas:automaton")
 include(":canvas:kdtree")
 include(":canvas:shuffle")

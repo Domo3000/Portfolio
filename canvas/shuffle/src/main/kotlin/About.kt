@@ -1,75 +1,47 @@
-import canvas.drawBackground
-import canvas.resetDimensions
+import canvas.*
 import csstype.FontWeight
 import emotion.react.css
 import kotlinx.browser.window
-import org.w3c.dom.CanvasRenderingContext2D
-import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import react.*
 import react.dom.html.ReactHTML
 import kotlin.math.log
 
-private const val size = 79
-private const val lineWidth = 1.0
+private data class ShuffleCounter(val deck: Deck, var counter: Int = 0, var finished: Boolean = false)
 
-private fun getColor(n: Int): String {
-    if (n == 0) {
-        return "DimGray"
+private data class Details(val position: Position? = null)
+
+private data class Position(val x: Int = -1, val y: Int = -1) {
+    override fun equals(other: Any?): Boolean {
+        (other as? Position)?.let {
+            if (x != it.x) return false
+            if (y != it.y) return false
+        } ?: return false
+
+        return true
     }
-
-    val scale = (log(n.toDouble(), 2.0) * 12).toInt()
-
-    if (scale >= 180) {
-        return "Red"
-    }
-
-    return "hsl(${180 - scale},100%,50%)"
 }
 
-private typealias Counter = Triple<Deck, Int, Boolean>
+private class State(initialSize: Int, private val setSize: StateSetter<Int>) {
+    var size = initialSize
 
-private typealias Details = Triple<Int, Int, Boolean>
+    val decks = Array(size) { y ->
+        Array(y + 1) { x ->
+            Position(x, y) to ShuffleCounter(Deck(y + 2))
+        }.toList()
+    }.toMutableList()
 
-// TODO move to helper classes
-private fun getElementWidth(width: Int) = (width - 2 * lineWidth) / size
+    val unfinished
+        get() = decks.flatten().filter { !it.second.finished }
 
-private fun getRelativeX(j: Int, width: Int) = lineWidth + j * getElementWidth(width)
+    val finished
+        get() = decks.flatten().filter { it.second.finished }.count()
 
-private fun getElementHeight(height: Int) = (height - 2 * lineWidth) / size
-
-private fun getRelativeY(i: Int, height: Int) = lineWidth + i * getElementHeight(height)
-
-private fun drawState(
-    state: Array<Array<Counter>>,
-    canvasElement: HTMLCanvasElement,
-    renderingContext: CanvasRenderingContext2D
-) {
-    for (i in 0 until size) {
-        for (j in 0 until size) {
-            val element = state[i][j]
-            val x = getRelativeX(j, canvasElement.width)
-            val y = getRelativeY(i, canvasElement.height)
-            val elementWidth = getElementWidth(canvasElement.width)
-            val elementHeight = getElementHeight(canvasElement.height)
-
-            renderingContext.fillStyle = getColor(element.second)
-            renderingContext.fillRect(
-                x,
-                y,
-                elementWidth,
-                elementHeight
-            )
-            if (element.third) {
-                renderingContext.fillStyle = "Black"
-                renderingContext.fillRect(
-                    x + elementWidth / 5.0 * 2.0,
-                    y + elementHeight / 5.0 * 2.0,
-                    elementWidth / 5.0,
-                    elementHeight / 5.0
-                )
-            }
-        }
+    fun addRow() {
+        size += 1
+        val newRow = Array(size) { x -> Position(x, size - 1) to ShuffleCounter(Deck(size + 1)) }.toList()
+        decks.add(newRow)
+        setSize(size)
     }
 }
 
@@ -80,59 +52,128 @@ class About : ExternalCanvas() {
 
     override val component: FC<Props>
         get() = FC {
-            var finished = 0
-            val (haveFinished, setHaveFinished) = useState(finished)
-            val (showDetails, setShowDetails) = useState(Details(-1, -1, false))
-            val (state, _) = useState(Array(size) { y -> Array(size) { Counter(Deck(y + 2), 0, false) } })
-            val unfinished =
-                Array(size) { y -> Array(size) { x -> y to x }.toList() }.toList().flatten().toMutableList()
-            val total = (((size) / 2.0) * (size + 1)).toInt()
+            val (size, setSize) = useState(9)
+            val (haveFinished, setHaveFinished) = useState(0)
+            val (showDetails, setShowDetails) = useState(Details())
+            val (newState, _) = useState(State(size, setSize))
+
+            fun getColor(n: Int): String {
+                if (n == 0) {
+                    return "DimGray"
+                }
+
+                val range = 240
+                val power = when (newState.size) {
+                    in 0..100 -> 10.0 + newState.size / 10.0
+                    else -> 20.0
+                }
+                /*
+                    180 / 15 => 2^15 is Red
+                    240 / 20 => 2^20 is Red
+                 */
+                val scaled = (log(n.toDouble(), 2.0) * (range / power)).toInt()
+
+                if (scaled >= range) {
+                    return "Red"
+                }
+
+                return "hsl(${range - scaled},100%,50%)"
+            }
+
+            fun drawElement(
+                position: Position,
+                element: ShuffleCounter?
+            ) {
+                val x = canvasElement.getRelativeX(position.x, newState.size)
+                val y = canvasElement.getRelativeY(position.y, newState.size)
+                val elementWidth = canvasElement.getElementWidth(newState.size)
+                val elementHeight = canvasElement.getElementHeight(newState.size)
+
+                renderingContext.fillStyle = getColor(element?.counter ?: 0)
+                renderingContext.fillRect(
+                    x,
+                    y,
+                    elementWidth,
+                    elementHeight
+                )
+
+                if (element?.finished == true) {
+                    renderingContext.fillStyle = "Black"
+                    renderingContext.fillRect(
+                        x + elementWidth / 5.0 * 2.0,
+                        y + elementHeight / 5.0 * 2.0,
+                        elementWidth / 5.0,
+                        elementHeight / 5.0
+                    )
+                }
+            }
+
+            fun drawState() {
+                for (i in 0 until newState.size) {
+                    for (j in 0 until newState.size) {
+                        drawElement(Position(i, j), newState.decks.getOrNull(j)?.getOrNull(i)?.second)
+                    }
+                }
+            }
 
             fun draw() {
                 renderingContext.drawBackground()
-                drawState(state, canvasElement, renderingContext)
+                drawState()
             }
 
-            fun step(x: Int, y: Int, repetitions: Int) {
-                if (x <= y && !state[y][x].third) {
-                    val deck = state[y][x].first
-                    var counter = state[y][x].second
-                    var c = repetitions
+            fun singleStep(position: Position, element: ShuffleCounter, repetitions: Int) {
+                var c = repetitions
 
-                    do {
-                        deck.pile(x + 2)
-                        counter += 1
-                    } while (!deck.sorted() && c-- > 0)
-
-                    val sorted = deck.sorted()
-
-                    if (sorted) {
-                        finished += 1
-                        unfinished.remove(y to x)
-                    }
-
-                    state[y][x] = Counter(deck, counter, sorted)
-                } else {
-                    unfinished.remove(y to x)
-                }
+                do {
+                    element.deck.pile(position.x + 2)
+                    element.counter += 1
+                    element.finished = element.deck.sorted()
+                } while (!element.finished && c-- > 0)
             }
 
-            fun runRandomSteps(amount: Int, repetitions: Int) {
-                var count = 0
-                while (count++ < amount) {
-                    unfinished.random().let { (y, x) ->
-                        step(x, y, repetitions)
+            fun newRunRandomSteps(amount: Int, repetitions: Int): Set<Pair<Position, ShuffleCounter>> {
+                val toDraw = mutableSetOf<Pair<Position, ShuffleCounter>>()
+
+                // run a lot for start and end
+                newState.unfinished.firstOrNull()?.let { (position, element) ->
+                    toDraw.add(position to element)
+                    singleStep(position, element, amount * repetitions)
+                }
+
+                newState.unfinished.toList().lastOrNull()?.let { (position, element) ->
+                    toDraw.add(position to element)
+                    singleStep(position, element, amount * repetitions)
+                }
+
+                // run often for a few
+                (0..repetitions).forEach { _ ->
+                    newState.unfinished.toList().randomOrNull()?.let { (position, element) ->
+                        toDraw.add(position to element)
+                        singleStep(position, element, amount)
                     }
                 }
+
+                // run a bit for many
+                (0..amount).forEach { _ ->
+                    newState.unfinished.toList().randomOrNull()?.let { (position, element) ->
+                        toDraw.add(position to element)
+                        singleStep(position, element, repetitions)
+                    }
+                }
+
+                return toDraw
             }
 
             fun runStep() {
-                runRandomSteps(500, 10)
-                setHaveFinished(finished)
-                draw()
+                newRunRandomSteps(50, 10).forEach { (position, element) ->
+                    drawElement(position, element)
+                }
 
-                if(unfinished.isEmpty()) {
-                    clearInterval()
+                setHaveFinished(newState.finished)
+
+                if (newState.unfinished.size < 200) {
+                    newState.addRow()
+                    draw()
                 }
             }
 
@@ -242,41 +283,40 @@ class About : ExternalCanvas() {
                     val bounds = canvasElement.getBoundingClientRect()
                     val x = it.clientX - bounds.left
                     val y = it.clientY - bounds.top
-                    val elementHeight = getElementHeight(canvasElement.height)
-                    val elementWidth = getElementWidth(canvasElement.width)
 
-                    val relativeX = ((x - lineWidth) / elementWidth).toInt()
-                    val relativeY = ((y - lineWidth) / elementHeight).toInt()
+                    val relativeX = canvasElement.getX(x, size)
+                    val relativeY = canvasElement.getY(y, size)
 
                     if (relativeX in 0..relativeY &&
                         relativeY >= 0 &&
                         relativeX < size
                         && relativeY < size &&
-                        (relativeX != showDetails.second ||
-                                relativeY != showDetails.first)
+                        (relativeX != showDetails.position?.x ||
+                                relativeY != showDetails.position.y)
                     ) {
-                        setShowDetails(Details(relativeY, relativeX, true))
+                        setShowDetails(Details(Position(relativeX, relativeY)))
                     } else {
-                        setShowDetails(Details(-1, -1, false))
+                        setShowDetails(Details())
                     }
                 }
             }
 
             ReactHTML.div {
                 className = Classnames.text
-                if (showDetails.third) {
+
+                showDetails.position?.let { (x, y) ->
+                    val element = newState.decks[y][x].second
                     ReactHTML.p {
-                        val element = state[showDetails.first][showDetails.second]
-                        +"${showDetails.first + 2}:${showDetails.second + 2} = ${element.second}"
-                        if (element.third) {
+                        +"${showDetails.position.y + 2}:${showDetails.position.x + 2} = ${element.counter}"
+                        if (element.finished) {
                             +" has finished!"
                         } else {
                             +"+"
                         }
                     }
-                } else {
+                } ?: run {
                     ReactHTML.p {
-                        +"$haveFinished/$total have finished!"
+                        +"$haveFinished/${(((size) / 2.0) * (size + 1)).toInt()} have finished!"
                     }
                 }
             }

@@ -1,21 +1,13 @@
 import canvas.drawBackground
 import canvas.resetDimensions
-import csstype.Float
 import csstype.NamedColor
-import csstype.pct
-import csstype.px
-import emotion.react.css
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
-import react.ExternalCanvas
-import react.FC
-import react.Props
-import react.dom.html.ReactHTML.button
+import react.*
 import react.dom.html.ReactHTML.canvas
 import react.dom.html.ReactHTML.div
-import react.useEffectOnce
 import kotlin.random.Random
 
 private fun drawRules(canvasElement: HTMLCanvasElement, renderingContext: CanvasRenderingContext2D) {
@@ -95,30 +87,17 @@ class KdTree : ExternalCanvas() {
                 }
             }
 
-            // TODO reuse buttons from shuffle
             div {
                 className = Classnames.phoneElement
-                button {
-                    +"Balance"
-                    css {
-                        width = 50.pct
-                        padding = 15.px
-                        float = Float.left
-                    }
-                    onClick = {
-                        balance()
-                    }
-                }
-                button {
-                    +"Clear"
-                    css {
-                        width = 50.pct
-                        padding = 15.px
-                        float = Float.left
-                    }
-                    onClick = {
-                        clear()
-                    }
+                buttonRow {
+                    buttons = listOf(
+                        Button("Balance", false) {
+                            balance()
+                        },
+                        Button("Clear", false) {
+                            clear()
+                        }
+                    )
                 }
             }
 

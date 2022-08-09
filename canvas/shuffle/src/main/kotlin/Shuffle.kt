@@ -1,15 +1,10 @@
 import canvas.drawBackground
 import canvas.resetDimensions
-import csstype.*
-import emotion.react.css
 import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
-import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import react.*
-import react.dom.events.MouseEventHandler
-import react.dom.html.InputType
 import react.dom.html.ReactHTML
 
 private fun drawState(
@@ -21,7 +16,7 @@ private fun drawState(
     val lineWidth = 1.0
 
     deck.elements.forEachIndexed { i, e ->
-        val elementHeight = e.toDouble() / size.toDouble()
+        val elementHeight = e.toDouble() / size.toDouble() // TODO util functions
         val maxHeight = canvasElement.height - 2 * lineWidth
         val relativeHeight = lineWidth + maxHeight - (maxHeight * elementHeight)
         val maxWidth = canvasElement.width - 2 * lineWidth
@@ -30,48 +25,6 @@ private fun drawState(
 
         renderingContext.fillStyle = "hsl(${elementHeight * 360},100%,50%)"
         renderingContext.fillRect(relativeWidth, relativeHeight, elementWidth, lineWidth + maxHeight - relativeHeight)
-    }
-}
-
-external interface ButtonProps : Props {
-    var text: String
-    var disabled: Boolean
-    var onClick: MouseEventHandler<HTMLButtonElement>
-    var width: Double
-}
-
-typealias Button = Triple<String, Boolean, MouseEventHandler<HTMLButtonElement>>
-
-external interface ButtonRowProps : Props {
-    var buttons: List<Triple<String, Boolean, MouseEventHandler<HTMLButtonElement>>>
-}
-
-val buttonRow = FC<ButtonRowProps> { props -> // TODO move to common
-    ReactHTML.div {
-        props.buttons.forEach {
-            button {
-                text = it.first
-                disabled = it.second
-                onClick = it.third
-                width = (99.99 / props.buttons.size)
-            }
-        }
-    }
-}
-
-val button = FC<ButtonProps> { props ->
-    ReactHTML.button {
-        +props.text
-        css {
-            width = props.width.pct
-            padding = 15.px
-            float = Float.left
-            if (props.disabled) {
-                textDecoration = TextDecoration.lineThrough
-            }
-        }
-        onClick = props.onClick
-        disabled = props.disabled
     }
 }
 
@@ -106,19 +59,11 @@ class Shuffle : ExternalCanvas() {
                 draw()
             }
 
-            ReactHTML.input {
-                id = "slider-input"
-                type = InputType.range
+            sliderInput {
+                value = deckSizeState.toDouble().toString()
                 min = 2.0
                 max = 100.0
                 step = 1.0
-                value = deckSizeState.toDouble().toString()
-                css {
-                    appearance = None.none
-                    width = 100.pct
-                    outline = None.none
-                    backgroundColor = NamedColor.darkgray
-                }
                 onChange = {
                     clearLoop()
                     setDeckSizeState(it.target.value.toDouble().toInt())
@@ -133,19 +78,11 @@ class Shuffle : ExternalCanvas() {
                 id = canvasId
             }
 
-            ReactHTML.input {
-                id = "shuffler-input"
-                type = InputType.range
+            sliderInput {
+                value = shufflerState.toDouble().toString()
                 min = 2.0
                 max = deckSizeState.toDouble()
                 step = 1.0
-                value = shufflerState.toDouble().toString()
-                css {
-                    appearance = None.none
-                    width = 100.pct
-                    outline = None.none
-                    backgroundColor = NamedColor.darkgray
-                }
                 onChange = {
                     clearLoop()
                     setShufflerState(it.target.value.toDouble().toInt())
@@ -192,19 +129,11 @@ class Shuffle : ExternalCanvas() {
                 )
             }
 
-            ReactHTML.input {
-                id = "delay-input"
-                type = InputType.range
+            sliderInput {
+                value = delayState.toDouble().toString()
                 min = 0.0
                 max = 500.0
                 step = 10.0
-                value = delayState.toDouble().toString()
-                css {
-                    appearance = None.none
-                    width = 100.pct
-                    outline = None.none
-                    backgroundColor = NamedColor.darkgray
-                }
                 onChange = {
                     clearLoop()
                     setDelayState(it.target.value.toDouble().toInt())
