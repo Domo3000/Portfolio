@@ -7,13 +7,13 @@ kotlin {
         binaries.executable()
         browser {
             runTask {
-                outputFileName = "kdtree.js"
+                outputFileName = "automaton.js"
             }
         }
     }
 }
 
 dependencies {
-    implementation(project(":shared-canvas"))
+    implementation(project(":canvas"))
     testImplementation(kotlin("test"))
 }

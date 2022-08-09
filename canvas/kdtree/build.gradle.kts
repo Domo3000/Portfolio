@@ -7,13 +7,13 @@ kotlin {
         binaries.executable()
         browser {
             runTask {
-                outputFileName = "shuffle.js"
+                outputFileName = "kdtree.js"
             }
         }
     }
 }
 
 dependencies {
-    implementation(project(":shared-canvas"))
+    implementation(project(":canvas"))
     testImplementation(kotlin("test"))
 }

@@ -2,6 +2,7 @@ package projects.automaton
 
 import Classnames
 import projects.ProjectOverview
+import projects.externalCanvas
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.div
@@ -22,5 +23,5 @@ object AutomatonOverview : ProjectOverview() {
             }
         }
     override val playPage: FC<Props>
-        get() = Canvas
+        get() = externalCanvas("Automaton")
 }
