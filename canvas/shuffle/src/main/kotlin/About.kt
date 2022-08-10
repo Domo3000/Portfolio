@@ -1,11 +1,14 @@
 import canvas.*
+import csstype.Color
 import csstype.FontWeight
+import csstype.TextAlign
 import emotion.react.css
 import kotlinx.browser.window
 import org.w3c.dom.events.Event
 import react.*
 import react.dom.html.ReactHTML
 import kotlin.math.log
+import kotlin.math.pow
 
 private data class ShuffleCounter(val deck: Deck, var counter: Int = 0, var finished: Boolean = false)
 
@@ -34,8 +37,14 @@ private class State(initialSize: Int, private val setSize: StateSetter<Int>) {
     val unfinished
         get() = decks.flatten().filter { !it.second.finished }
 
+    val unfinishedCount
+        get() = unfinished.count()
+
     val finished
-        get() = decks.flatten().filter { it.second.finished }.count()
+        get() = decks.flatten().filter { it.second.finished }
+
+    val finishedCount
+        get() = finished.count()
 
     fun addRow() {
         size += 1
@@ -55,7 +64,12 @@ class About : ExternalCanvas() {
             val (size, setSize) = useState(9)
             val (haveFinished, setHaveFinished) = useState(0)
             val (showDetails, setShowDetails) = useState(Details())
-            val (newState, _) = useState(State(size, setSize))
+            val (state, _) = useState(State(size, setSize))
+
+            fun getPower(size: Int) = when (size) {
+                in 0..100 -> 10.0 + size / 10.0
+                else -> 20.0
+            }
 
             fun getColor(n: Int): String {
                 if (n == 0) {
@@ -63,14 +77,7 @@ class About : ExternalCanvas() {
                 }
 
                 val range = 240
-                val power = when (newState.size) {
-                    in 0..100 -> 10.0 + newState.size / 10.0
-                    else -> 20.0
-                }
-                /*
-                    180 / 15 => 2^15 is Red
-                    240 / 20 => 2^20 is Red
-                 */
+                val power = getPower(state.size)
                 val scaled = (log(n.toDouble(), 2.0) * (range / power)).toInt()
 
                 if (scaled >= range) {
@@ -84,10 +91,10 @@ class About : ExternalCanvas() {
                 position: Position,
                 element: ShuffleCounter?
             ) {
-                val x = canvasElement.getRelativeX(position.x, newState.size)
-                val y = canvasElement.getRelativeY(position.y, newState.size)
-                val elementWidth = canvasElement.getElementWidth(newState.size)
-                val elementHeight = canvasElement.getElementHeight(newState.size)
+                val x = canvasElement.getRelativeX(position.x, state.size)
+                val y = canvasElement.getRelativeY(position.y, state.size)
+                val elementWidth = canvasElement.getElementWidth(state.size)
+                val elementHeight = canvasElement.getElementHeight(state.size)
 
                 renderingContext.fillStyle = getColor(element?.counter ?: 0)
                 renderingContext.fillRect(
@@ -109,14 +116,15 @@ class About : ExternalCanvas() {
             }
 
             fun drawState() {
-                for (i in 0 until newState.size) {
-                    for (j in 0 until newState.size) {
-                        drawElement(Position(i, j), newState.decks.getOrNull(j)?.getOrNull(i)?.second)
+                for (i in 0 until state.size) {
+                    for (j in 0 until state.size) {
+                        drawElement(Position(i, j), state.decks.getOrNull(j)?.getOrNull(i)?.second)
                     }
                 }
             }
 
             fun draw() {
+                canvasElement.resetDimensions()
                 renderingContext.drawBackground()
                 drawState()
             }
@@ -124,61 +132,30 @@ class About : ExternalCanvas() {
             fun singleStep(position: Position, element: ShuffleCounter, repetitions: Int) {
                 var c = repetitions
 
-                do {
+                while (!element.finished && c-- > 0) {
                     element.deck.pile(position.x + 2)
                     element.counter += 1
                     element.finished = element.deck.sorted()
-                } while (!element.finished && c-- > 0)
-            }
-
-            fun newRunRandomSteps(amount: Int, repetitions: Int): Set<Pair<Position, ShuffleCounter>> {
-                val toDraw = mutableSetOf<Pair<Position, ShuffleCounter>>()
-
-                // run a lot for start and end
-                newState.unfinished.firstOrNull()?.let { (position, element) ->
-                    toDraw.add(position to element)
-                    singleStep(position, element, amount * repetitions)
                 }
-
-                newState.unfinished.toList().lastOrNull()?.let { (position, element) ->
-                    toDraw.add(position to element)
-                    singleStep(position, element, amount * repetitions)
-                }
-
-                // run often for a few
-                (0..repetitions).forEach { _ ->
-                    newState.unfinished.toList().randomOrNull()?.let { (position, element) ->
-                        toDraw.add(position to element)
-                        singleStep(position, element, amount)
-                    }
-                }
-
-                // run a bit for many
-                (0..amount).forEach { _ ->
-                    newState.unfinished.toList().randomOrNull()?.let { (position, element) ->
-                        toDraw.add(position to element)
-                        singleStep(position, element, repetitions)
-                    }
-                }
-
-                return toDraw
             }
 
             fun runStep() {
-                newRunRandomSteps(50, 10).forEach { (position, element) ->
+                if (state.unfinishedCount < 10 && state.size < 199) {
+                    state.addRow()
+                    draw()
+                } else if (state.unfinished.isEmpty()) {
+                    clearInterval()
+                }
+
+                state.unfinished.forEach { (position, element) ->
+                    singleStep(position, element, 50000 / state.unfinishedCount)
                     drawElement(position, element)
                 }
 
-                setHaveFinished(newState.finished)
-
-                if (newState.unfinished.size < 200) {
-                    newState.addRow()
-                    draw()
-                }
+                setHaveFinished(state.finishedCount)
             }
 
             val resizeHandler: (Event) -> Unit = {
-                canvasElement.resetDimensions()
                 draw()
             }
 
@@ -193,6 +170,59 @@ class About : ExternalCanvas() {
                 ReactHTML.p {
                     +"Which configurations cause the longest loop?"
                 }
+            }
+
+            ReactHTML.canvas {
+                className = Classnames.responsiveCanvas
+                id = canvasId
+                onClick = {
+                    val bounds = canvasElement.getBoundingClientRect()
+                    val x = it.clientX - bounds.left
+                    val y = it.clientY - bounds.top
+
+                    val relativeX = canvasElement.getX(x, size)
+                    val relativeY = canvasElement.getY(y, size)
+
+                    if (relativeX in 0..relativeY &&
+                        relativeY >= 0 &&
+                        relativeX < size
+                        && relativeY < size &&
+                        (relativeX != showDetails.position?.x ||
+                                relativeY != showDetails.position.y)
+                    ) {
+                        setShowDetails(Details(Position(relativeX, relativeY)))
+                    } else {
+                        setShowDetails(Details())
+                    }
+                }
+            }
+
+            ReactHTML.div {
+                className = Classnames.text
+
+                showDetails.position?.let { (x, y) ->
+                    val element = state.decks[y][x].second
+                    ReactHTML.p {
+                        +"${showDetails.position.y + 2}:${showDetails.position.x + 2} = ${element.counter}"
+                        if (element.finished) {
+                            +" has finished!"
+                        } else {
+                            +"+"
+                        }
+                    }
+                } ?: run {
+                    ReactHTML.p {
+                        +"Click an element to see its progress."
+                    }
+                }
+
+                ReactHTML.p {
+                    +"$haveFinished/${(((size) / 2.0) * (size + 1)).toInt()} have finished!"
+                }
+            }
+
+            ReactHTML.div {
+                className = Classnames.text
                 ReactHTML.details {
                     ReactHTML.summary {
                         +"k-Pile Shuffling Explanation"
@@ -274,56 +304,28 @@ class About : ExternalCanvas() {
                         +"Is it chaotic? Can we know which k would give the largest result for a given n? Can we know how long it would run?"
                     }
                 }
-            }
-
-            ReactHTML.canvas {
-                className = Classnames.responsiveCanvas
-                id = canvasId
-                onClick = {
-                    val bounds = canvasElement.getBoundingClientRect()
-                    val x = it.clientX - bounds.left
-                    val y = it.clientY - bounds.top
-
-                    val relativeX = canvasElement.getX(x, size)
-                    val relativeY = canvasElement.getY(y, size)
-
-                    if (relativeX in 0..relativeY &&
-                        relativeY >= 0 &&
-                        relativeX < size
-                        && relativeY < size &&
-                        (relativeX != showDetails.position?.x ||
-                                relativeY != showDetails.position.y)
-                    ) {
-                        setShowDetails(Details(Position(relativeX, relativeY)))
-                    } else {
-                        setShowDetails(Details())
+                ReactHTML.details {
+                    ReactHTML.summary {
+                        +"Legend"
                     }
-                }
-            }
 
-            ReactHTML.div {
-                className = Classnames.text
+                    val power = getPower(size).toInt()
 
-                showDetails.position?.let { (x, y) ->
-                    val element = newState.decks[y][x].second
-                    ReactHTML.p {
-                        +"${showDetails.position.y + 2}:${showDetails.position.x + 2} = ${element.counter}"
-                        if (element.finished) {
-                            +" has finished!"
-                        } else {
-                            +"+"
+                    (0..power).forEach {
+                        val n = 2.0.pow(it).toInt()
+                        ReactHTML.div {
+                            css {
+                                backgroundColor = Color(getColor(n))
+                                textAlign = TextAlign.center
+                            }
+                            +"$n"
                         }
-                    }
-                } ?: run {
-                    ReactHTML.p {
-                        +"$haveFinished/${(((size) / 2.0) * (size + 1)).toInt()} have finished!"
                     }
                 }
             }
 
             useEffectOnce {
                 addEventListener("resize" to resizeHandler)
-                canvasElement.resetDimensions()
                 draw()
                 intervalId = window.setInterval({ runStep() }, 0)
             }

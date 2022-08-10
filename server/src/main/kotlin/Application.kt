@@ -31,12 +31,6 @@ fun HTML.index() {
             id = "script-holder"
             script(src = "/static/browser.js") { }
         }
-        /*
-        div("hidden") {
-            id = "connect4-script-holder"
-            script(src = "/static/connect4.js") { async = true }
-        }
-         */
         script(src = "/static/automaton.js") { async = true }
         script(src = "/static/kdtree.js") { async = true }
         script(src = "/static/shuffle.js") { async = true }

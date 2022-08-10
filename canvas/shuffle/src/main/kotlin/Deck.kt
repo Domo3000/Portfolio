@@ -13,30 +13,25 @@ class Deck(var elements: List<Int>) {
         return true
     }
 
-    fun randomize(): Deck {
+    fun randomize() {
         elements = elements.shuffled()
-
-        return this
     }
 
-    fun reset(size: Int): Deck {
+    fun reset(size: Int) {
         val new = Deck(size)
         elements = new.elements
-        return this
     }
 
-    fun sort(): Deck = reset(size)
+    fun sort() = reset(size)
 
-    fun pile(n: Int): Deck {
-        val builder = Array(n) { mutableListOf<Int>() }
+    fun pile(n: Int) {
+        val builder = Array<Int?>(size + n) { null }
 
         elements.forEachIndexed { i, e ->
-            builder[i % n].add(e)
+            builder[(i % n) * ((size + n)/ n) + i / n] = e
         }
 
-        elements = builder.toList().flatten()
-
-        return this
+        elements = builder.filterNotNull().toList()
     }
 
     override fun equals(other: Any?): Boolean {
