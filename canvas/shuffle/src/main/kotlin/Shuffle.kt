@@ -1,5 +1,7 @@
 import canvas.drawBackground
 import canvas.resetDimensions
+import css.Classes
+import emotion.react.css
 import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
@@ -74,7 +76,7 @@ class Shuffle : ExternalCanvas() {
             }
 
             ReactHTML.canvas {
-                className = Classnames.responsiveCanvas
+                css(Classes.canvas)
                 id = canvasId
             }
 

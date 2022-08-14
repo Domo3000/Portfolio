@@ -1,6 +1,7 @@
 package aboutme.intro
 
-import Classnames
+import css.Classes
+import emotion.react.css
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.div
@@ -8,7 +9,7 @@ import react.dom.html.ReactHTML.p
 
 val IntroComponent = FC<Props> {
     div {
-        className = Classnames.text
+        css(Classes.text)
 
         p {
             +"Welcome, this page is under construction!"

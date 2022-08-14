@@ -15,5 +15,5 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":shared"))
+    implementation(project(":shared:js"))
 }

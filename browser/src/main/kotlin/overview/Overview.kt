@@ -1,6 +1,7 @@
 package overview
 
 import aboutme.AboutMeStates
+import css.Classes
 import csstype.Float
 import csstype.pct
 import csstype.px

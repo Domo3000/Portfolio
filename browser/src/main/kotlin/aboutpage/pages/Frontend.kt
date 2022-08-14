@@ -1,6 +1,7 @@
 package aboutpage.pages
 
-import Classnames
+import css.Classes
+import emotion.react.css
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
@@ -9,7 +10,7 @@ import react.dom.html.ReactHTML.p
 
 val FrontendComponent = FC<Props> {
     div {
-        className = Classnames.text
+        css(Classes.text)
 
         p {
             a {
@@ -33,7 +34,20 @@ val FrontendComponent = FC<Props> {
         }
 
         p {
-            +"In order to reduce size of the .js file I split some larger projects up into their own modules. Their implementation pages explain in more detail how they were included."
+            +"In order to reduce size of the .js file I split the projects up into their own modules."
+        }
+
+        p {
+            +"To connect other .js files with this React App the "
+            a {
+                href = "https://github.com/Domo3000/Portfolio/blob/main/canvas/src/main/kotlin/react/ExternalCanvas.kt"
+                +"ExternalCanvas"
+            }
+            + " class sets up EventListeners. The Events get dispatched by "
+            a {
+                href = "https://github.com/Domo3000/Portfolio/blob/main/browser/src/main/kotlin/projects/ProjectOverview.kt"
+                +"ProjectOverview.externalCanvas(name: String)"
+            }
         }
     }
 }

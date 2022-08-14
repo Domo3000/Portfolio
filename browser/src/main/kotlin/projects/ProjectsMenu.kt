@@ -6,6 +6,7 @@ import projects.automaton.AutomatonOverview
 import projects.connect4.Connect4Overview
 import projects.kdtree.KdTreeOverview
 import projects.shuffle.ShuffleOverview
+import projects.trippy.TrippyOverview
 import react.FC
 import react.Props
 
@@ -22,6 +23,11 @@ object ProjectStates {
         override val component: FC<Props>
             get() = AutomatonOverview.create
     }
+    object Trippy: ProjectState {
+        override val text: String = "Trippy"
+        override val component: FC<Props>
+            get() = TrippyOverview.create
+    }
     object Shuffle: ProjectState {
         override val text: String = "\"Shuffling\""
         override val component: FC<Props>
@@ -33,7 +39,7 @@ object ProjectStates {
             get() = Connect4Overview.create
     }
 
-    val states = listOf(KdTree, Automaton, Shuffle)
+    val states = listOf(KdTree, Automaton, Trippy, Shuffle)
 }
 
 object ProjectsMenu : SubMenu(ProjectStates.KdTree) {

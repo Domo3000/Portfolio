@@ -1,6 +1,9 @@
 import canvas.drawBackground
 import canvas.resetDimensions
+import css.Classes
+import css.Classnames
 import csstype.NamedColor
+import emotion.react.css
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
@@ -68,7 +71,7 @@ class KdTree : ExternalCanvas() {
             }
 
             canvas {
-                className = Classnames.responsiveCanvas
+                css(Classes.canvas)
                 id = canvasId
                 onClick = {
                     if (tree == null || tree!!.size() < 1000) {

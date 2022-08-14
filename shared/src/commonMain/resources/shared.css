@@ -3,39 +3,25 @@
     color: black;
 }
 
-.hidden {
-    display: none;
-}
-
-.centered-content {
-    margin: 0 auto;
-    max-width: 250px;
-    text-align: center;
-}
-
-.responsive-canvas {
-    width: 100%;
-    max-width: 1000px;
-}
-
-.text {
-    text-align: left;
-    font-family: "Lucida Console", monospace;
-}
-
 button {
     text-align: center;
     font-family: "Monaco", monospace;
     font-weight: bold;
 }
 
+#script-holder {
+    width: 100%;
+    margin: 0;
+}
+
 #hamburger-icon {
     display: none;
 }
 
-#script-holder {
-    width: 100%;
-    margin: 0;
+@media only screen and (max-width: 600px) {
+    #hamburger-icon {
+        display: block;
+    }
 }
 
 #phone-menu, #desktop-menu {
@@ -46,6 +32,12 @@ button {
 
 @media only screen and (min-width: 600px) {
     #phone-menu {
+        display: none;
+    }
+}
+
+@media only screen and (min-width: 600px) {
+    .phone-element {
         display: none;
     }
 }
@@ -71,17 +63,5 @@ button {
 @media only screen and (min-width: 850px) and (max-width: 1050px) {
     #content-holder {
         width: 75%;
-    }
-}
-
-@media only screen and (min-width: 600px) {
-    .phone-element {
-        display: none;
-    }
-}
-
-@media only screen and (max-width: 600px) {
-    #hamburger-icon {
-        display: block;
     }
 }

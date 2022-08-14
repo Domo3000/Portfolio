@@ -8,6 +8,7 @@ pluginManagement {
 rootProject.name = "Portfolio"
 
 include(":shared")
+include(":shared:js")
 include(":canvas")
 include(":shared-connect4")
 include(":browser")

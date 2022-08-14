@@ -1,4 +1,5 @@
 import canvas.*
+import css.Classes
 import csstype.Color
 import csstype.FontWeight
 import csstype.TextAlign
@@ -116,9 +117,10 @@ class About : ExternalCanvas() {
             }
 
             fun drawState() {
-                for (i in 0 until state.size) {
-                    for (j in 0 until state.size) {
-                        drawElement(Position(i, j), state.decks.getOrNull(j)?.getOrNull(i)?.second)
+                state.decks.forEach { list ->
+                    list.forEach { (position, counter) ->
+                        drawElement(Position(position.y, position.x), null)
+                        drawElement(position, counter)
                     }
                 }
             }
@@ -147,8 +149,10 @@ class About : ExternalCanvas() {
                     clearInterval()
                 }
 
+                val repetitions = 50000 / state.unfinishedCount
+
                 state.unfinished.forEach { (position, element) ->
-                    singleStep(position, element, 50000 / state.unfinishedCount)
+                    singleStep(position, element, repetitions)
                     drawElement(position, element)
                 }
 
@@ -160,7 +164,8 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                className = Classnames.text
+                css(Classes.text)
+
                 ReactHTML.p {
                     css {
                         fontWeight = FontWeight.bold
@@ -173,7 +178,7 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.canvas {
-                className = Classnames.responsiveCanvas
+                css(Classes.canvas)
                 id = canvasId
                 onClick = {
                     val bounds = canvasElement.getBoundingClientRect()
@@ -198,7 +203,8 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                className = Classnames.text
+                css(Classes.text)
+
 
                 showDetails.position?.let { (x, y) ->
                     val element = state.decks[y][x].second
@@ -222,24 +228,19 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                className = Classnames.text
+                css(Classes.text)
+
                 ReactHTML.details {
                     ReactHTML.summary {
                         +"k-Pile Shuffling Explanation"
                     }
-                    ReactHTML.ul {
-                        ReactHTML.li {
-                            +"Take n cards and reorganize them into k piles"
-                        }
-                        ReactHTML.li {
-                            +"First card on first pile, second card on second pile, ..."
-                        }
-                        ReactHTML.li {
-                            +"k'th card on k'th pile, k+1'th card on 1st pile, ..."
-                        }
-                        ReactHTML.li {
-                            +"Once all cards have been put into piles put those on top of each other."
-                        }
+                    list {
+                        texts = listOf(
+                            "Take n cards and reorganize them into k piles",
+                            "First card on first pile, second card on second pile, ...",
+                            "k'th card on k'th pile, k+1'th card on 1st pile, ...",
+                            "Once all cards have been put into piles put those on top of each other."
+                        )
                     }
                     ReactHTML.p {
                         +"Deck:[1, 2, 3, 4] with 2-pile shuffle => Pile1:[1, 3], Pile2:[2, 4] => Deck:[1, 3, 2, 4]"
@@ -255,13 +256,11 @@ class About : ExternalCanvas() {
                     ReactHTML.summary {
                         +"Notation"
                     }
-                    ReactHTML.ul {
-                        ReactHTML.li {
-                            +"n cards loop back after x times repeatedly using k pile shuffles => n:k = x"
-                        }
-                        ReactHTML.li {
-                            +"n cards using different k values => n:(2->3->4->5)"
-                        }
+                    list {
+                        texts = listOf(
+                            "\"n:k = x\" means n cards loop back after x times repeatedly using k pile shuffles",
+                            "\"n:(2->3->4->5)\" = n cards using different k values"
+                        )
                     }
                     ReactHTML.p {
                         +"Previous example would be 4:(2->3) and 4:2 = 2"

@@ -1,6 +1,5 @@
 package projects
 
-import Classnames
 import csstype.*
 import emotion.react.css
 import kotlinx.browser.document
@@ -32,8 +31,6 @@ abstract class ProjectOverview {
             val (state, setState) = useState<ProjectSubState>(ProjectSubStates.Play)
 
             ReactHTML.div {
-                className = Classnames.contentHeader
-
                 css {
                     maxWidth = 1000.px
                 }
@@ -57,8 +54,6 @@ abstract class ProjectOverview {
             }
 
             ReactHTML.div {
-                className = Classnames.content
-
                 css {
                     maxWidth = 1000.px
                 }

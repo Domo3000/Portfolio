@@ -1,6 +1,7 @@
 package aboutme.impressum
 
-import Classnames
+import css.Classes
+import emotion.react.css
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.div
@@ -9,7 +10,8 @@ import react.dom.html.ReactHTML.p
 val ImpressumComponent = FC<Props> {
     div {
         id = "impressum"
-        className = Classnames.text
+        css(Classes.text)
+
         p {
             +"Dominik Leys"
         }

@@ -1,17 +1,15 @@
 package aboutpage.pages
 
-import Classnames
-import react.FC
-import react.Props
+import css.Classes
+import emotion.react.css
+import react.*
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.li
 import react.dom.html.ReactHTML.p
-import react.dom.html.ReactHTML.ul
 
 val BackendComponent = FC<Props> {
     div {
-        className = Classnames.text
+        css(Classes.text)
 
         p {
             a {
@@ -37,19 +35,13 @@ val BackendComponent = FC<Props> {
         p {
             +"Planned features:"
         }
-        ul {
-            li {
-                +"unit tests"
-            }
-            li {
-                +"handling websockets for Connect4 game"
-            }
-            li {
-                +"randomized and simple AI for Connect4 game"
-            }
-            li {
-                +"neural network for Connect4 game"
-            }
+        list {
+            texts = listOf(
+                "unit tests",
+                "handling websockets for Connect4 game",
+                "randomized and simple AI for Connect4 game",
+                "neural network for Connect4 game"
+            )
         }
     }
 }

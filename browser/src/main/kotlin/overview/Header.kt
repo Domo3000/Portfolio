@@ -1,6 +1,6 @@
 package overview
 
-import Classnames
+import css.Classes
 import csstype.*
 import emotion.react.css
 import react.FC
@@ -33,25 +33,30 @@ val Header = FC<HeaderProps> { props ->
             }
         }
         h1 {
-            className = Classnames.centeredContent
+            css {
+                textAlign = TextAlign.center
+                fontFamily = string("\"Garamond \", serif")  // TODO different font
+            }
             +"Domo"
         }
     }
 
     div {
         id = "phone-menu"
-        css {
-            zIndex = integer(5)
-            position = Position.absolute
-            top = 40.px
-            left = 5.px
-            borderStyle = LineStyle.solid
-            borderRadius = 10.px
-            borderWidth = LineWidth.thin
-            overflow = Overflow.hidden
-        }
+
         if (collapsed) {
-            className = Classnames.hidden
+            css(Classes.hidden)
+        } else {
+            css {
+                zIndex = integer(5)
+                position = Position.absolute
+                top = 40.px
+                left = 5.px
+                borderStyle = LineStyle.solid
+                borderRadius = 10.px
+                borderWidth = LineWidth.thin
+                overflow = Overflow.hidden
+            }
         }
         Menu {
             currentState = props.currentState

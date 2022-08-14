@@ -1,6 +1,6 @@
 package projects.kdtree
 
-import Classnames
+import css.Classes
 import csstype.*
 import emotion.react.css
 import react.FC
@@ -47,7 +47,8 @@ private val image: FC<ImageProps>
 
 val About = FC<Props> {
     div {
-        className = Classnames.text
+        css(Classes.text)
+
         p {
             css {
                 fontWeight = FontWeight.bold
@@ -69,6 +70,9 @@ val About = FC<Props> {
             }
         }
         div {
+            css {
+                clear = Clear.left
+            }
             p {
                 +"KdTrees are used for example in video games to quickly calculate which objects are close to each other, usually to check which ones should run a coalition detection."
             }

@@ -1,6 +1,7 @@
 package projects.connect4
 
-import Classnames
+import css.Classes
+import emotion.react.css
 import kotlinx.browser.document
 import org.w3c.dom.events.Event
 import projects.ProjectOverview
@@ -14,7 +15,8 @@ object Connect4Overview : ProjectOverview() {
     override val aboutPage: FC<Props>
         get() = FC {
             div {
-                className = Classnames.text
+                css(Classes.text)
+
                 p {
                     +"This project has not been implemented yet!"
                 }
@@ -26,7 +28,8 @@ object Connect4Overview : ProjectOverview() {
     override val implementationPage: FC<Props>
         get() = FC {
             div {
-                className = Classnames.text
+                css(Classes.text)
+
                 p {
                     +"This project has not been implemented yet!"
                 }
@@ -44,7 +47,8 @@ object Connect4Overview : ProjectOverview() {
     override val playPage: FC<Props>
         get() = FC {
             p {
-                className = Classnames.text
+                css(Classes.text)
+
                 +"TODO"
             }
 

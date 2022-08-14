@@ -17,7 +17,7 @@ kotlin {
 dependencies {
     val coroutineVersion = findProperty("coroutineVersion")
 
-    implementation(project(":shared"))
+    implementation(project(":shared:js"))
     implementation(project(":shared-client"))
     implementation(project(":shared-connect4"))
 

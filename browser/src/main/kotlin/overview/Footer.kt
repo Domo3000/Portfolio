@@ -1,6 +1,6 @@
 package overview
 
-import Classnames
+import css.Classes
 import aboutme.AboutMeStates
 import csstype.pct
 import csstype.px
@@ -21,9 +21,10 @@ val Footer = FC<FooterProps> { props ->
             width = 100.pct
             maxHeight = 50.px
             padding = 15.px
+            marginTop = 200.px
         }
         h6 {
-            className = Classnames.centeredContent
+            css(Classes.centered)
             onClick = {
                 props.stateSetter(AboutMeStates.Impressum)
             }

@@ -1,6 +1,7 @@
 package projects.kdtree
 
-import Classnames
+import css.Classes
+import emotion.react.css
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
@@ -13,7 +14,8 @@ import react.dom.html.ReactHTML.ul
 
 val Implementation = FC<Props> {
     div {
-        className = Classnames.text
+        css(Classes.text)
+
         p {
             +"This was the first project I made for this page."
         }
@@ -53,7 +55,7 @@ val Implementation = FC<Props> {
                     +"Helper functions for "
                     a {
                         href =
-                            "https://github.com/Domo3000/Portfolio/blob/main/shared/src/jsMain/kotlin/canvas/Canvas.kt"
+                            "https://github.com/Domo3000/Portfolio/blob/main/canvas/src/main/kotlin/canvas/utils.kt"
                         +"Canvas Elements"
                     }
                 }

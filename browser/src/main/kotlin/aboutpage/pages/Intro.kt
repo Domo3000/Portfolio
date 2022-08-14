@@ -1,8 +1,8 @@
 package aboutpage.pages
 
-import Classnames
 import aboutme.AboutMeStates
 import aboutpage.AboutPageStates
+import css.Classes
 import csstype.FontWeight
 import emotion.react.css
 import menu.SubmenuState
@@ -37,7 +37,7 @@ private val list: FC<ListProps>
 
 val IntroComponent = FC<Props> {
     div {
-        className = Classnames.text
+        css(Classes.text)
 
         p {
             +"This is a full-stack web application written in "
