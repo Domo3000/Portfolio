@@ -1,6 +1,8 @@
 package trippy
 
-import canvas.*
+import canvas.ExternalCanvas
+import canvas.drawRectangle
+import canvas.setDimensions
 import css.Classes
 import emotion.react.css
 import kotlinx.browser.window
@@ -15,16 +17,24 @@ import kotlin.random.Random
 
 private typealias Position = Pair<Int, Int>
 
+class LookupMap(size: Int) { // TODO test if actually faster than directly accessing
+    private val graph = Graph(size)
+    private val map: HashMap<Pair<Int, Int>, Boolean> = hashMapOf()
+
+    fun defeats(defender: Int, fighter: Int) = map.getOrPut(defender to fighter) {
+        graph.get(defender)!!.incoming.contains(fighter)
+    }
+}
+
 class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
     var states = s
+    var lookupMap = LookupMap(states)
     private val random = Random(Date.now().toInt())
 
     override val elements = run {
-        val graph = Graph(states)
-
         Array(sizeY) {
             Array(sizeX) {
-                graph.get(random.nextInt() mod states)!!.value
+                random.nextInt() mod states
             }.toArrayList()
         }.toArrayList()
     }
@@ -36,15 +46,14 @@ class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
 
     fun setStates(s: Int) {
         states = s
-        val graph = Graph(states)
+        lookupMap = LookupMap(states)
         setAll { _, _ ->
-            graph.get(random.nextInt() mod states)!!.value
+            random.nextInt() mod states
         }
     }
 
     fun runStep() {
         val threshold = 1
-        val graph = Graph(states)
 
         withPosition.map { (position, node) ->
             val incoming = (-1..1).map { offsetY ->
@@ -55,7 +64,9 @@ class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
                         get(position.first + offsetX, position.second + offsetY)
                     }
                 }
-            }.flatten().filter { graph.get(node)!!.incoming.contains(it) }
+            }.flatten().filter {
+                lookupMap.defeats(node, it)
+            }
 
             position to incoming
         }.forEach { (position, incoming) ->
@@ -76,44 +87,40 @@ class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
 class Trippy : ExternalCanvas() {
     override val name: String = "Trippy"
 
-    private var intervalId: Int? = null
+    private var frameId: Int? = null
 
     override val component: FC<Props>
         get() = FC {
-            val size = 150
+            val size = 200
             val (states, setStates) = useState(3)
             val (running, setRunning) = useState(true)
             val (state, _) = useState(ElementArray(size, size * 3 / 4, states))
 
             fun drawState() {
-                val c = canvasElement
+                val r = renderingContext
+                val sizeX = state.sizeX
+                val sizeY = state.sizeY
+                val width = canvasElement.width
+                val height = canvasElement.height
                 for (y in 0 until state.sizeY) {
                     for (x in 0 until state.sizeX) {
-                        val element = state.get(x, y)
-                        val relativeX = c.getRelativeX(x, state.sizeX)
-                        val relativeY = c.getRelativeY(y, state.sizeY)
-                        val elementWidth = c.getElementWidth(state.sizeX)
-                        val elementHeight = c.getElementHeight(state.sizeY)
-
-                        renderingContext.fillStyle = "hsl(${(element * (360.0 / state.states)).toInt()},100%,50%)"
-                        renderingContext.fillRect(
-                            relativeX,
-                            relativeY,
-                            elementWidth,
-                            elementHeight
+                        r.drawRectangle(
+                            x,
+                            y,
+                            sizeX,
+                            sizeY,
+                            width,
+                            height,
+                            "hsl(${(state.get(x, y) * (360.0 / state.states)).toInt()},100%,50%)"
                         )
                     }
                 }
             }
 
-            fun draw() {
-                renderingContext.drawBackground()
-                drawState()
-            }
-
             fun run() {
                 state.runStep()
-                draw()
+                drawState()
+                frameId = window.requestAnimationFrame { run() }
             }
 
             fun stop() {
@@ -122,8 +129,7 @@ class Trippy : ExternalCanvas() {
             }
 
             val resizeHandler: (Event) -> Unit = {
-                canvasElement.resetDimensions()
-                draw()
+                drawState()
             }
 
             canvas {
@@ -148,28 +154,28 @@ class Trippy : ExternalCanvas() {
                 width = 100.0
                 onClick = {
                     setRunning(!running)
-                    intervalId?.let { clearInterval() } ?: run {
-                        intervalId = window.setInterval({ run() }, 0)
+                    frameId?.let { clearInterval() } ?: run {
+                        frameId = window.requestAnimationFrame { run() }
                     }
                 }
             }
 
             useEffect(states) {
                 state.setStates(states)
-                draw()
+                drawState()
             }
 
             useEffectOnce {
+                canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
-                canvasElement.resetDimensions()
-                draw()
-                intervalId = window.setInterval({ run() }, 0)
+                drawState()
+                frameId = window.requestAnimationFrame { run() }
             }
         }
 
     private fun clearInterval() {
-        intervalId?.let { window.clearInterval(it) }
-        intervalId = null
+        frameId?.let { window.cancelAnimationFrame(it) }
+        frameId = null
     }
 
     override fun cleanUp() {

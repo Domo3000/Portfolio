@@ -1,5 +1,4 @@
-import canvas.drawBackground
-import canvas.resetDimensions
+import canvas.*
 import css.Classes
 import css.Classnames
 import csstype.NamedColor
@@ -160,7 +159,7 @@ private fun Node.draw(
     renderingContext2D.fillStyle = pseudoRandomColor(random)
 
     when (orientation) {
-        Horizontal -> {
+        Horizontal -> { // TODO get rid of border
             renderingContext2D.fillRect(
                 absoluteMinX + offset,
                 absoluteMinY + offset,

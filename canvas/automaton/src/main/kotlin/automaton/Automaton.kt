@@ -1,8 +1,10 @@
 package automaton
 
-import canvas.*
+import canvas.ExternalCanvas
+import canvas.clear
+import canvas.drawRectangle
+import canvas.setDimensions
 import css.Classes
-import csstype.NamedColor
 import csstype.px
 import emotion.react.css
 import kotlinx.browser.window
@@ -34,13 +36,13 @@ class BooleanArray(x: Int, y: Int) : WrappingArray<Boolean>(x, y) {
         elements.add(ArrayList((0 until sizeX).map { false }))
     }
 
-    fun clear() { // TODO flip all?
+    fun clear() {
         (0..sizeY).forEach { addRow() }
     }
 }
 
 class State(size: Int) {
-    val elements = BooleanArray(size, size * 3 / 4)
+    val elements = BooleanArray(size, size + 2)
 
     private var currentRow = 0
 
@@ -76,25 +78,26 @@ class Automaton : ExternalCanvas() {
             val (delay, setDelay) = useState(50)
             val (randomNr, setRandom) = useState(50)
             val (running, setRunning) = useState(false)
-            val (state, _) = useState(State(149))
+            val (state, _) = useState(State(138))
             val random = Random(Date.now().toInt())
 
             fun drawState() {
-                val c = canvasElement
+                val r = renderingContext
+                val sizeX = state.elements.sizeX + 2
+                val sizeY = state.elements.sizeY
+                val width = canvasElement.width
+                val height = canvasElement.height
                 for (y in 0 until state.elements.sizeY) {
                     for (x in -1..state.elements.sizeX) {
                         if (state.elements.get(x, y, default)) {
-                            val relativeX = c.getRelativeX(x + 1, state.elements.sizeX + 2)
-                            val relativeY = c.getRelativeY(y, state.elements.sizeY)
-                            val elementWidth = c.getElementWidth(state.elements.sizeX + 2)
-                            val elementHeight = c.getElementHeight(state.elements.sizeY)
-
-                            renderingContext.fillStyle = NamedColor.black // TODO use everywhere
-                            renderingContext.fillRect(
-                                relativeX,
-                                relativeY,
-                                elementWidth,
-                                elementHeight
+                            r.drawRectangle(
+                                x + 1,
+                                y,
+                                sizeX,
+                                sizeY,
+                                width,
+                                height,
+                                "Black"
                             )
                         }
                     }
@@ -102,7 +105,7 @@ class Automaton : ExternalCanvas() {
             }
 
             fun draw() {
-                renderingContext.drawBackground()
+                renderingContext.clear()
                 drawState()
             }
 
@@ -117,7 +120,6 @@ class Automaton : ExternalCanvas() {
             }
 
             val resizeHandler: (Event) -> Unit = {
-                canvasElement.resetDimensions()
                 draw()
             }
 
@@ -220,9 +222,9 @@ class Automaton : ExternalCanvas() {
             }
 
             useEffectOnce {
+                canvasElement.setDimensions(700, 700)
                 addEventListener("resize" to resizeHandler)
                 state.elements.flip(state.elements.sizeX / 2, 0)
-                canvasElement.resetDimensions()
                 draw()
             }
         }

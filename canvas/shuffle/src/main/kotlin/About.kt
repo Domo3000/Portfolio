@@ -58,7 +58,7 @@ private class State(initialSize: Int, private val setSize: StateSetter<Int>) {
 class About : ExternalCanvas() {
     override val name: String = "ShuffleAbout"
 
-    var intervalId: Int? = null
+    var frameId: Int? = null
 
     override val component: FC<Props>
         get() = FC {
@@ -127,7 +127,7 @@ class About : ExternalCanvas() {
 
             fun draw() {
                 canvasElement.resetDimensions()
-                renderingContext.drawBackground()
+                renderingContext.clear()
                 drawState()
             }
 
@@ -157,6 +157,8 @@ class About : ExternalCanvas() {
                 }
 
                 setHaveFinished(state.finishedCount)
+
+                frameId = window.requestAnimationFrame { runStep() }
             }
 
             val resizeHandler: (Event) -> Unit = {
@@ -324,21 +326,21 @@ class About : ExternalCanvas() {
             }
 
             useEffectOnce {
+                canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
                 draw()
-                intervalId = window.setInterval({ runStep() }, 0)
+                frameId = window.requestAnimationFrame { runStep() }
             }
         }
 
     private fun clearInterval() {
-        intervalId?.let { window.clearInterval(it) }
-        intervalId = null
+        frameId?.let { window.cancelAnimationFrame(it) }
+        frameId = null
     }
 
     override fun cleanUp() {
         clearInterval()
     }
-
 
     override fun initialize() {}
 

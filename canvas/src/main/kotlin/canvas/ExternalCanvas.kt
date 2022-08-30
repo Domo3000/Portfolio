@@ -1,4 +1,4 @@
-package react
+package canvas
 
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -6,6 +6,9 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.CanvasRenderingContext2DSettings
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
+import react.FC
+import react.Props
+import react.create
 import react.dom.client.hydrateRoot
 
 typealias EventListener = Pair<String, (Event) -> Unit>
@@ -15,11 +18,9 @@ abstract class ExternalCanvas(private val id: String = "external-holder") {
 
     val canvasId = "external-canvas"
     val canvasElement: HTMLCanvasElement
-        get() = document.getElementById(canvasId) as HTMLCanvasElement // TODO why does by lazy not work here
+        get() = document.getElementById(canvasId) as HTMLCanvasElement
     val renderingContext: CanvasRenderingContext2D
-        get() = canvasElement.getContext("2d", CanvasRenderingContext2DSettings(false)) as CanvasRenderingContext2D
-
-
+        get() = canvasElement.getContext("2d", CanvasRenderingContext2DSettings(true)) as CanvasRenderingContext2D
 
     abstract val name: String
     abstract val component: FC<Props>

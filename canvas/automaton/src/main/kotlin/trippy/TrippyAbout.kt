@@ -1,7 +1,9 @@
 package trippy
 
-import canvas.drawBackground
-import canvas.resetDimensions
+import canvas.ExternalCanvas
+import canvas.clear
+import canvas.setDimensions
+import css.Classes
 import csstype.pct
 import csstype.px
 import emotion.react.css
@@ -55,20 +57,16 @@ class TrippyAbout : ExternalCanvas() {
             }
 
             fun draw() {
-                renderingContext.drawBackground()
+                renderingContext.clear()
                 drawState()
             }
 
             val resizeHandler: (Event) -> Unit = {
-                canvasElement.resetDimensions(1.0)
                 draw()
             }
 
             canvas {
-                css {
-                    width = 100.pct
-                    maxWidth = 800.px
-                }
+                css(Classes.canvas)
                 id = canvasId
             }
 
@@ -94,8 +92,8 @@ class TrippyAbout : ExternalCanvas() {
             }
 
             useEffectOnce {
+                canvasElement.setDimensions(800, 800)
                 addEventListener("resize" to resizeHandler)
-                canvasElement.resetDimensions(1.0)
                 draw()
             }
         }

@@ -1,5 +1,4 @@
-import canvas.drawBackground
-import canvas.resetDimensions
+import canvas.*
 import css.Classes
 import emotion.react.css
 import kotlinx.browser.window
@@ -15,18 +14,15 @@ private fun drawState(
     renderingContext: CanvasRenderingContext2D
 ) {
     val size = deck.size
-    val lineWidth = 1.0
 
     deck.elements.forEachIndexed { i, e ->
         val elementHeight = e.toDouble() / size.toDouble() // TODO util functions
-        val maxHeight = canvasElement.height - 2 * lineWidth
-        val relativeHeight = lineWidth + maxHeight - (maxHeight * elementHeight)
-        val maxWidth = canvasElement.width - 2 * lineWidth
-        val elementWidth = maxWidth / size
-        val relativeWidth = lineWidth + i * elementWidth
+        val relativeHeight = canvasElement.height - (canvasElement.height * elementHeight)
+        val elementWidth = canvasElement.width.toDouble() / size
+        val relativeWidth = i * elementWidth
 
         renderingContext.fillStyle = "hsl(${elementHeight * 360},100%,50%)"
-        renderingContext.fillRect(relativeWidth, relativeHeight, elementWidth, lineWidth + maxHeight - relativeHeight)
+        renderingContext.fillRect(relativeWidth, relativeHeight, elementWidth, canvasElement.height - relativeHeight)
     }
 }
 
@@ -52,12 +48,11 @@ class Shuffle : ExternalCanvas() {
             }
 
             fun draw() {
-                renderingContext.drawBackground()
+                renderingContext.clear()
                 drawState(deckState, canvasElement, renderingContext)
             }
 
             val resizeHandler: (Event) -> Unit = {
-                canvasElement.resetDimensions()
                 draw()
             }
 
@@ -150,8 +145,8 @@ class Shuffle : ExternalCanvas() {
             }
 
             useEffectOnce {
+                canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
-                canvasElement.resetDimensions()
                 draw()
             }
         }

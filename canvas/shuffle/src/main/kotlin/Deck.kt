@@ -28,7 +28,7 @@ class Deck(var elements: List<Int>) {
         val builder = Array<Int?>(size + n) { null }
 
         elements.forEachIndexed { i, e ->
-            builder[(i % n) * ((size + n)/ n) + i / n] = e
+            builder[(i % n) * ((size + n) / n) + i / n] = e
         }
 
         elements = builder.filterNotNull().toList()

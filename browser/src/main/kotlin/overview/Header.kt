@@ -26,7 +26,10 @@ val Header = FC<HeaderProps> { props ->
             id = "hamburger-icon"
             +"☰"
             css {
+                textAlign = TextAlign.center
                 float = Float.left
+                minWidth = 30.px
+                minHeight = 30.px
             }
             onClick = {
                 setCollapsed(!collapsed)
