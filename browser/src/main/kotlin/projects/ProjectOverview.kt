@@ -22,6 +22,7 @@ abstract class ProjectOverview {
     abstract val aboutPage: FC<Props>
     abstract val implementationPage: FC<Props>
     abstract val playPage: FC<Props>
+    open val header: String? = null
 
     private val states: Set<ProjectSubState> =
         setOf(ProjectSubStates.Play, ProjectSubStates.About, ProjectSubStates.Implementation)
@@ -29,6 +30,21 @@ abstract class ProjectOverview {
     val create: FC<Props>
         get() = FC {
             val (state, setState) = useState<ProjectSubState>(ProjectSubStates.Play)
+
+            ReactHTML.div {
+                css {
+                    maxWidth = 1000.px
+                }
+
+                header?.let {
+                    ReactHTML.h2 {
+                        css {
+                            textAlign = TextAlign.center
+                        }
+                        +it
+                    }
+                }
+            }
 
             ReactHTML.div {
                 css {

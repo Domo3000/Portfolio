@@ -12,6 +12,7 @@ import react.useState
 external interface HeaderProps : Props {
     var currentState: OverviewState
     var stateSetter: (OverviewState) -> Unit
+    var externalStates: List<String>
 }
 
 val Header = FC<HeaderProps> { props ->
@@ -67,6 +68,7 @@ val Header = FC<HeaderProps> { props ->
                 props.stateSetter(it)
                 setCollapsed(!collapsed)
             }
+            externalStates = props.externalStates
         }
     }
 }

@@ -7,6 +7,7 @@ import react.Props
 import react.dom.html.ReactHTML
 
 object TrippyOverview : ProjectOverview() {
+    override val header = "Trippy"
     override val aboutPage: FC<Props>
         get() = externalCanvas("TrippyAbout")
     override val implementationPage: FC<Props>

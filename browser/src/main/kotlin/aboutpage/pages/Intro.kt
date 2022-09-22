@@ -1,12 +1,12 @@
 package aboutpage.pages
 
-import aboutme.AboutMeStates
-import aboutpage.AboutPageStates
+import aboutme.AboutMeMenu
+import aboutpage.AboutPageMenu
 import css.Classes
 import csstype.FontWeight
 import emotion.react.css
-import menu.SubmenuState
-import projects.ProjectStates
+import menu.SubMenu
+import projects.ProjectsMenu
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
@@ -18,17 +18,20 @@ import react.dom.html.ReactHTML.summary
 import react.dom.html.ReactHTML.ul
 
 external interface ListProps : Props {
-    var elements: List<SubmenuState>
+    var page: SubMenu
 }
 
 private val list: FC<ListProps>
     get() = FC { props ->
-        if (props.elements.isNotEmpty()) {
+        props.page.elements
+        if (props.page.elements.isNotEmpty()) {
             ul {
-                props.elements.forEach {
+                props.page.elements.forEach {
                     li {
-                        +it.text
-                        // TODO onClick change to state
+                        a {
+                            href = "/${props.page.path}/${it.path}"
+                            +it.text
+                        }
                     }
                 }
             }
@@ -78,7 +81,7 @@ val IntroComponent = FC<Props> {
             }
             +"Information about the author"
             list {
-                elements = AboutMeStates.states
+                page = AboutMeMenu
             }
         }
         details {
@@ -87,7 +90,7 @@ val IntroComponent = FC<Props> {
             }
             +"Information about this page"
             list {
-                elements = AboutPageStates.states
+                page = AboutPageMenu
             }
         }
         details {
@@ -96,7 +99,7 @@ val IntroComponent = FC<Props> {
             }
             +"Little showcases"
             list {
-                elements = ProjectStates.states
+                page = ProjectsMenu
             }
         }
     }

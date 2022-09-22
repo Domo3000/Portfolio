@@ -1,5 +1,5 @@
 import kotlinx.browser.document
-import overview.Overview
+import overview.Routing
 import react.create
 import react.dom.client.createRoot
 
@@ -15,6 +15,6 @@ private fun consoleBanner() {
 fun main() {
     document.getElementById("script-holder")?.let {
         consoleBanner()
-        createRoot(it).render(Overview.create())
+        createRoot(it).render(Routing.create())
     }
 }

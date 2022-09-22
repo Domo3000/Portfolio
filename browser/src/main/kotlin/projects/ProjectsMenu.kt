@@ -12,29 +12,42 @@ import react.Props
 
 sealed interface ProjectState : SubmenuState
 
+sealed interface ExternalProjectState : SubmenuState {
+    val externalName: String
+}
+
 object ProjectStates {
-    object KdTree : ProjectState {
+    object KdTree : ExternalProjectState {
         override val text: String = "KdTree"
+        override val path: String = "kd-tree"
+        override val externalName = text
         override val component: FC<Props>
             get() = KdTreeOverview.create
     }
-    object Automaton: ProjectState {
+    object Automaton: ExternalProjectState {
         override val text: String = "Automaton"
+        override val path: String = text.lowercase()
+        override val externalName = text
         override val component: FC<Props>
             get() = AutomatonOverview.create
     }
-    object Trippy: ProjectState {
+    object Trippy: ExternalProjectState {
         override val text: String = "Trippy"
+        override val path: String = text.lowercase()
+        override val externalName = text
         override val component: FC<Props>
             get() = TrippyOverview.create
     }
-    object Shuffle: ProjectState {
+    object Shuffle: ExternalProjectState {
         override val text: String = "\"Shuffling\""
+        override val path: String = "shuffling"
+        override val externalName = "Shuffle"
         override val component: FC<Props>
             get() = ShuffleOverview.create
     }
     object Connect4: ProjectState { // Deactivated for now
         override val text: String = "Connect4"
+        override val path: String = "connect-four"
         override val component: FC<Props>
             get() = Connect4Overview.create
     }
@@ -44,6 +57,7 @@ object ProjectStates {
 
 object ProjectsMenu : SubMenu(ProjectStates.KdTree) {
     override val text: String = "Projects"
+    override val path: String = text.lowercase()
     override val matchingState = ProjectState::class
     override val elements: List<SubmenuState> = ProjectStates.states
 }

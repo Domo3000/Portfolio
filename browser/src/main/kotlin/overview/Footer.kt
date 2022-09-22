@@ -1,10 +1,12 @@
 package overview
 
+import aboutme.AboutMeMenu
 import css.Classes
 import aboutme.AboutMeStates
 import csstype.pct
 import csstype.px
 import emotion.react.css
+import kotlinx.browser.window
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.div
@@ -26,6 +28,7 @@ val Footer = FC<FooterProps> { props ->
         h6 {
             css(Classes.centered)
             onClick = {
+                window.history.replaceState(Unit, "Domo", "/${AboutMeMenu.path}/${AboutMeStates.Impressum.path}")
                 props.stateSetter(AboutMeStates.Impressum)
             }
             +"Impressum"

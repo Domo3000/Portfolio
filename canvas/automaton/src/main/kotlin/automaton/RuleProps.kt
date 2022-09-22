@@ -63,6 +63,7 @@ private val rulePicker = FC<RulePickerProps> { props ->
                     height = 30.px
                     backgroundColor = Color(if (props.active.contains(props.rule)) "Black" else "White")
                     float = Float.left
+                    border = None.none
                 }
                 onClick = {
                     props.ruleSetter(props.active.switch(props.rule))
@@ -103,9 +104,10 @@ val ruleRow = FC<RowProps> { props ->
                 ReactHTML.div {
                     ReactHTML.input {
                         css {
-                            maxWidth = 75.px
+                            width = 90.pct
                             height = 25.px
                             backgroundColor = Color("White")
+                            margin = Auto.auto
                         }
                         type = InputType.number
                         min = 1.0
@@ -117,10 +119,10 @@ val ruleRow = FC<RowProps> { props ->
                     }
                 }
 
-                val (background, text) = when (props.wrapping) {
-                    true -> "Black" to "White"
-                    false -> "White" to "Black"
-                    else -> "Lightgray" to "Black"
+                val (background, text, label) = when (props.wrapping) {
+                    true -> Triple("Black", "White", "Edge")
+                    false -> Triple("White", "Black", "Edge")
+                    else -> Triple("Lightgray", "Black", "Wrapping")
                 }
 
                 ReactHTML.button {
@@ -129,7 +131,6 @@ val ruleRow = FC<RowProps> { props ->
                         height = 30.px
                         backgroundColor = Color(background)
                         color = Color(text)
-                        float = Float.left
                     }
                     onClick = {
                         when {
@@ -138,7 +139,13 @@ val ruleRow = FC<RowProps> { props ->
                             else -> props.wrappingSetter(null)
                         }
                     }
-                    +"Wrapping"
+                    +label
+                }
+            }
+        } else if (i == 5 || i == 3) {
+            ReactHTML.div {
+                css {
+                    clear = Clear.both
                 }
             }
         }

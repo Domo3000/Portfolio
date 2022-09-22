@@ -1,6 +1,6 @@
 import canvas.*
 import css.Classes
-import css.Classnames
+import css.ClassNames
 import csstype.NamedColor
 import emotion.react.css
 import org.w3c.dom.CanvasRenderingContext2D
@@ -30,13 +30,6 @@ private fun drawRules(canvasElement: HTMLCanvasElement, renderingContext: Canvas
     )
 }
 
-// TODO cleanup more like Shuffle
-private fun draw(tree: Node?, canvasElement: HTMLCanvasElement, renderingContext: CanvasRenderingContext2D) {
-    canvasElement.resetDimensions()
-    renderingContext.drawBackground()
-    tree?.draw(canvasElement, renderingContext) ?: drawRules(canvasElement, renderingContext)
-}
-
 class KdTree : ExternalCanvas() {
     override val name: String = "KdTree"
 
@@ -45,21 +38,27 @@ class KdTree : ExternalCanvas() {
             var orientation: Orientation = Horizontal
             var tree: Node? = null
 
+            fun draw() {
+                canvasElement.resetDimensions()
+                renderingContext.drawBackground()
+                tree?.draw(canvasElement, renderingContext) ?: drawRules(canvasElement, renderingContext)
+            }
+            
             val balance: () -> Unit = {
                 orientation = orientation.switch()
                 if (tree != null) {
                     tree = rebalance(tree!!, orientation)
-                    draw(tree, canvasElement, renderingContext)
+                    draw()
                 }
             }
 
             val clear: () -> Unit = {
                 tree = null
-                draw(tree, canvasElement, renderingContext)
+                draw()
             }
 
             val resizeHandler: (Event) -> Unit = {
-                draw(tree, canvasElement, renderingContext)
+                draw()
             }
 
             val keypressHandler: (Event) -> Unit = { event ->
@@ -83,14 +82,14 @@ class KdTree : ExternalCanvas() {
                             } else {
                                 tree = tree!!.insert(RelativePosition(x, y))
                             }
-                            draw(tree, canvasElement, renderingContext)
+                            draw()
                         }
                     }
                 }
             }
 
             div {
-                className = Classnames.phoneElement
+                className = ClassNames.phoneElement
                 buttonRow {
                     buttons = listOf(
                         Button("Balance", false) {
@@ -104,9 +103,10 @@ class KdTree : ExternalCanvas() {
             }
 
             useEffectOnce {
+                canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
                 addEventListener("keypress" to keypressHandler)
-                draw(tree, canvasElement, renderingContext)
+                draw()
             }
         }
 

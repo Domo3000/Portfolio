@@ -13,6 +13,7 @@ import react.dom.html.ReactHTML.div
 external interface MenuProps : Props {
     var currentState: OverviewState
     var stateSetter: (OverviewState) -> Unit
+    var externalStates: List<String>
 }
 
 val Menu = FC<MenuProps> { props ->
@@ -26,16 +27,19 @@ val Menu = FC<MenuProps> { props ->
         AboutMeMenu.create {
             currentState = props.currentState
             setState = { props.stateSetter(it) }
+            externalStates = props.externalStates
         }
 
         AboutPageMenu.create {
             currentState = props.currentState
             setState = { props.stateSetter(it) }
+            externalStates = props.externalStates
         }
 
         ProjectsMenu.create {
             currentState = props.currentState
             setState = { props.stateSetter(it) }
+            externalStates = props.externalStates
         }
     }
 }

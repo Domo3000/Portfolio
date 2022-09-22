@@ -6,22 +6,53 @@ import csstype.Float
 import csstype.pct
 import csstype.px
 import emotion.react.css
-import react.FC
-import react.Props
+import kotlinx.browser.document
+import projects.ExternalProjectState
+import projects.ProjectStates
+import react.*
 import react.dom.html.ReactHTML.div
-import react.useState
 
 interface OverviewState {
     val component: FC<Props>
 }
 
-val Overview = FC<Props> {
-    val (state, setState) = useState<OverviewState>(AboutMeStates.Intro)
+external interface LoadingScreenProps : Props {
+    var title: String
+}
+
+class LoadingScreen {
+    val component: FC<LoadingScreenProps>
+        get() = FC { props ->
+            div {
+                +"loading ${props.title}"
+            }
+        }
+}
+
+object NotFoundState : OverviewState {
+    override val component = FC<Props> {
+        div {
+            css(Classes.text)
+            +"404 - Not Found"
+        }
+    }
+}
+
+fun overview(component: OverviewState = AboutMeStates.Intro) = FC<Props> {
+    val (state, setState) = useState(component)
+    val (loadingExternalScripts, setExternalScripts) = useState(
+        ProjectStates.states.map { it.externalName }
+    )
+
+    fun enable(key: String) {
+        setExternalScripts { l -> l - key }
+    }
 
     div {
         Header {
             currentState = state
             stateSetter = { setState(it) }
+            externalStates = loadingExternalScripts
         }
     }
 
@@ -35,6 +66,7 @@ val Overview = FC<Props> {
             Menu {
                 currentState = state
                 stateSetter = { setState(it) }
+                externalStates = loadingExternalScripts
             }
         }
         div {
@@ -44,8 +76,27 @@ val Overview = FC<Props> {
                 minHeight = 600.px
                 float = Float.left
             }
-            state.component {}
+
+            val maybeExternalState = state as? ExternalProjectState
+
+            if (maybeExternalState == null || !loadingExternalScripts.contains(maybeExternalState.externalName)) {
+                state.component {}
+            } else {
+                LoadingScreen().component { title = maybeExternalState.text }
+            }
         }
     }
     Footer { stateSetter = { setState(it) } }
+
+    useEffectOnce {
+        loadingExternalScripts.forEach { key ->
+            document.addEventListener("${key}Initialized", {
+                enable(key)
+            })
+        }
+
+        if (component != state) {
+            setState(component)
+        }
+    }
 }

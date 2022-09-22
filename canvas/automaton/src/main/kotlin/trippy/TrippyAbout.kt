@@ -3,7 +3,9 @@ package trippy
 import canvas.ExternalCanvas
 import canvas.clear
 import canvas.setDimensions
+import css.ClassNames
 import css.Classes
+import csstype.Float
 import csstype.pct
 import csstype.px
 import emotion.react.css
@@ -44,14 +46,14 @@ class TrippyAbout : ExternalCanvas() {
             }
 
             fun drawState() {
-                val c = canvasElement
                 state.elements.forEach { element ->
+                    val color = "hsl(${getColor(element.value)},100%,50%)"
+                    val fromX = getX(element.value, canvasElement.width)
+                    val fromY = getY(element.value, canvasElement.height)
                     element.outgoing.forEach { to ->
-                        val fromX = getX(element.value, c.width)
-                        val fromY = getY(element.value, c.height)
-                        val toX = getX(to, c.width)
-                        val toY = getY(to, c.height)
-                        drawLine(fromX, fromY, toX, toY, "hsl(${getColor(element.value)},100%,50%)")
+                        val toX = getX(to, canvasElement.width)
+                        val toY = getY(to, canvasElement.height)
+                        drawLine(fromX, fromY, toX, toY, color)
                     }
                 }
             }
@@ -65,16 +67,18 @@ class TrippyAbout : ExternalCanvas() {
                 draw()
             }
 
-            canvas {
-                css(Classes.canvas)
-                id = canvasId
-            }
-
             ReactHTML.div {
-                css {
-                    width = 100.pct
-                    maxWidth = 800.px
+                css(ClassNames.phoneFullWidth) {
+                    width = 50.pct
+                    float = Float.left
+                    marginRight = 5.px
                 }
+
+                canvas {
+                    css(Classes.canvas)
+                    id = canvasId
+                }
+
                 sliderInput {
                     value = size.toDouble().toString()
                     min = 3.0
@@ -82,6 +86,46 @@ class TrippyAbout : ExternalCanvas() {
                     step = 2.0
                     onChange = {
                         setSize(it.target.value.toDouble().toInt())
+                    }
+                }
+            }
+
+            ReactHTML.div {
+                ReactHTML.details {
+                    ReactHTML.summary {
+                        +"Cellular Automata"
+                    }
+                    ReactHTML.p {
+                        +"This is another example of a cellular automaton, where the next state is calculated by looking at the neighbors of each cell."
+                    }
+                }
+
+                ReactHTML.details {
+                    ReactHTML.summary {
+                        +"Moore Neighborhood"
+                    }
+                    ReactHTML.p {
+                        +"This CA uses a "
+                        ReactHTML.a {
+                            href = "https://en.wikipedia.org/wiki/Moore_neighborhood"
+                            +"Moore Neighborhood"
+                        }
+                        +" which looks at the 8 cells surrounding a cell."
+                    }
+                    ReactHTML.p {
+                        +"For each cell it checks if there's more than the threshold of a hand sign that defeats it in its neighborhood." // TODO rewrite
+                    }
+                    ReactHTML.p {
+                        +"For each battle the threshold will randomly be set to 2 or 3." // TODO slider?
+                    }
+                }
+
+                ReactHTML.details {
+                    ReactHTML.summary {
+                        +"Scalable Rock Paper Scissors"
+                    }
+                    ReactHTML.p {
+                        +"The graphic shows how winning hands are calculated for a Rock Paper Scissor game with $size hand signs."
                     }
                 }
             }

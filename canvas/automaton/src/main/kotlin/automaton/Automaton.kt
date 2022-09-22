@@ -4,8 +4,9 @@ import canvas.ExternalCanvas
 import canvas.clear
 import canvas.drawRectangle
 import canvas.setDimensions
+import css.ClassNames
 import css.Classes
-import csstype.px
+import csstype.*
 import emotion.react.css
 import kotlinx.browser.window
 import org.w3c.dom.events.Event
@@ -124,91 +125,99 @@ class Automaton : ExternalCanvas() {
             }
 
             ReactHTML.div {
+                css {
+                    maxWidth = 800.px
+                    margin = Auto.auto
+                }
+                canvas {
+                        css(Classes.canvas)
+                        id = canvasId
+                }
+
                 ReactHTML.div {
-                    css {
-                        maxWidth = 300.px
+                    css(ClassNames.phoneFullWidth) {
+                        width = 50.pct
+                        minWidth = 300.px
+                        float = Float.left
                     }
-                    ruleRow {
-                        active = rules
-                        ruleSetter = setRules
-                        wrapping = default
-                        wrappingSetter = setDefault
+
+                    ReactHTML.div {
+                        css {
+                            width = 282.px // 3 * 90 + 3 * 4 (margin left + right)
+                            margin = Auto.auto
+                        }
+
+                        ruleRow {
+                            active = rules
+                            ruleSetter = setRules
+                            wrapping = default
+                            wrappingSetter = setDefault
+                        }
                     }
                 }
+
                 ReactHTML.div {
-                    ReactHTML.details {
-                        css(Classes.text)
+                    css(ClassNames.phoneFullWidth) {
+                        width = 50.pct
+                        float = Float.left
+                    }
 
-                        ReactHTML.summary {
-                            +"Cellular Automata"
-                        }
-                        ReactHTML.span {
-                            +"Simple rules can lead to complex behaviour."
+                    sliderInput {
+                        value = delay.toDouble().toString()
+                        min = 0.0
+                        max = 200.0
+                        step = 10.0
+                        onChange = {
+                            stop()
+                            setDelay(it.target.value.toDouble().toInt())
                         }
                     }
-                }
-            }
-
-            canvas {
-                css(Classes.canvas)
-                id = canvasId
-            }
-
-            sliderInput {
-                value = delay.toDouble().toString()
-                min = 0.0
-                max = 200.0
-                step = 10.0
-                onChange = {
-                    stop()
-                    setDelay(it.target.value.toDouble().toInt())
-                }
-            }
-
-            button {
-                text = if (running) "Stop" else "Play at ${delay}ms"
-                disabled = false
-                width = 100.0
-                onClick = {
-                    setRunning(!running)
-                    intervalId?.let { clearInterval() } ?: run {
-                        intervalId = window.setInterval({ runStep() }, delay)
-                    }
-                }
-            }
-
-            buttonRow {
-                buttons = listOf(
-                    Button("Clear", false) {
-                        stop()
-                        state.reset()
-                        state.elements.clear()
-                        draw()
-                    },
-                    Button("Middle", false) {
-                        stop()
-                        state.reset()
-                        state.elements.flip(state.elements.sizeX / 2, 0)
-                        draw()
-                    },
-                    Button("Random $randomNr", false) {
-                        stop()
-                        state.reset()
-                        (1..randomNr).forEach { _ ->
-                            state.elements.flip(random.nextInt() mod state.elements.sizeX, 0)
+                    button {
+                        text = if (running) "Stop" else "Play at ${delay}ms"
+                        disabled = false
+                        width = 100.0
+                        onClick = {
+                            setRunning(!running)
+                            intervalId?.let { clearInterval() } ?: run {
+                                intervalId = window.setInterval({ runStep() }, delay)
+                            }
                         }
-                        draw()
                     }
-                )
-            }
 
-            sliderInput {
-                value = randomNr.toDouble().toString()
-                min = 1.0
-                max = (state.elements.sizeX - 1).toDouble()
-                step = 1.0
-                onChange = {
-                    setRandom(it.target.value.toDouble().toInt())
+                    buttonRow {
+                        buttons = listOf(
+                            Button("Clear", false) {
+                                stop()
+                                state.reset()
+                                state.elements.clear()
+                                draw()
+                            },
+                            Button("Middle", false) {
+                                stop()
+                                state.reset()
+                                state.elements.flip(state.elements.sizeX / 2, 0)
+                                draw()
+                            },
+                            Button("Random $randomNr", false) {
+                                stop()
+                                state.reset()
+                                (1..randomNr).forEach { _ ->
+                                    state.elements.flip(random.nextInt() mod state.elements.sizeX, 0)
+                                }
+                                draw()
+                            }
+                        )
+                    }
+
+                    sliderInput {
+                        value = randomNr.toDouble().toString()
+                        min = 1.0
+                        max = (state.elements.sizeX - 1).toDouble()
+                        step = 1.0
+                        onChange = {
+                            setRandom(it.target.value.toDouble().toInt())
+                        }
+                    }
                 }
             }
 

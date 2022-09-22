@@ -16,4 +16,5 @@ kotlin {
 
 dependencies {
     implementation(project(":shared:js"))
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.3.0-pre.388")
 }

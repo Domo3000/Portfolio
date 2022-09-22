@@ -66,10 +66,7 @@ suspend fun main(): Unit = coroutineScope {
             }
             routing {
                 //createConnect4Websocket()
-
-                get("/") {
-                    call.respondHtml(HttpStatusCode.OK, HTML::index)
-                }
+                // TODO look into creating CSS with Ktor: https://ktor.io/docs/css-dsl.html#serve_css
                 get("/health") {
                     call.respondText("Healthy!")
                 }
@@ -79,8 +76,11 @@ suspend fun main(): Unit = coroutineScope {
                               |Allow: /""".trimMargin()
                     )
                 }
+                get("/{...}") {
+                    call.respondHtml(HttpStatusCode.OK, HTML::index)
+                }
                 static("/static") {
-                    resources()
+                    resources("assets")
                 }
             }
         }

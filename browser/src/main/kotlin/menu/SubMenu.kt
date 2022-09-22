@@ -1,9 +1,12 @@
 package menu
 
 import csstype.FontWeight
+import csstype.TextDecoration
 import csstype.px
 import emotion.react.css
+import kotlinx.browser.window
 import overview.OverviewState
+import projects.ExternalProjectState
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.div
@@ -12,13 +15,15 @@ import kotlin.reflect.KClass
 
 external interface SubMenuElementProps : Props {
     var currentState: OverviewState
+    var disabled: Boolean
     var click: (SubmenuState) -> Unit
 }
 
 interface SubmenuState : OverviewState {
     val text: String
+    val path: String
 
-    val menu: FC<SubMenuElementProps>
+    val element: FC<SubMenuElementProps>
         get() = FC { props ->
             div {
                 +text
@@ -33,6 +38,10 @@ interface SubmenuState : OverviewState {
                     if (props.currentState == this@SubmenuState) {
                         fontWeight = FontWeight.bold
                     }
+
+                    if (props.disabled) {
+                        textDecoration = TextDecoration.lineThrough
+                    }
                 }
             }
         }
@@ -41,10 +50,12 @@ interface SubmenuState : OverviewState {
 external interface SubMenuProps : Props {
     var currentState: OverviewState
     var setState: (SubmenuState) -> Unit
+    var externalStates: List<String>
 }
 
 abstract class SubMenu(private val initialSubState: SubmenuState) {
     abstract val text: String
+    abstract val path: String
     abstract val matchingState: KClass<out SubmenuState>
     abstract val elements: List<SubmenuState>
 
@@ -59,10 +70,22 @@ abstract class SubMenu(private val initialSubState: SubmenuState) {
             }
             if (!collapsed || matchingState.isInstance(props.currentState)) {
                 elements.forEach { element ->
-                    element.menu {
-                        currentState = props.currentState
-                        click = {
-                            props.setState(it)
+                    val maybeExternalState = element as? ExternalProjectState
+                    if (maybeExternalState != null && props.externalStates.contains(maybeExternalState.externalName)) {
+                        element.element {
+                            currentState = props.currentState
+                            disabled = true
+                            click = { }
+                        }
+                    } else {
+                        element.element {
+                            currentState = props.currentState
+                            disabled = false
+                            click =
+                                {
+                                    window.history.replaceState(Unit,"Domo","/$path/${element.path}")
+                                    props.setState(it)
+                                }
                         }
                     }
                 }

@@ -83,7 +83,7 @@ class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
     }
 }
 
-//TODO optimize
+// TODO optimize
 class Trippy : ExternalCanvas() {
     override val name: String = "Trippy"
 

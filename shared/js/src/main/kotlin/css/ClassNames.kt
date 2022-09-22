@@ -2,6 +2,7 @@ package css
 
 import csstype.ClassName
 
-object Classnames {
+object ClassNames {
     val phoneElement = ClassName("phone-element")
+    val phoneFullWidth = ClassName("phone-full-width")
 }
