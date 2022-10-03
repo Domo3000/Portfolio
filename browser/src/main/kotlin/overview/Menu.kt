@@ -1,7 +1,7 @@
 package overview
 
 import aboutme.AboutMeMenu
-import aboutpage.AboutPageMenu
+import aboutsite.AboutSiteMenu
 import csstype.Float
 import csstype.px
 import emotion.react.css
@@ -30,7 +30,7 @@ val Menu = FC<MenuProps> { props ->
             externalStates = props.externalStates
         }
 
-        AboutPageMenu.create {
+        AboutSiteMenu.create {
             currentState = props.currentState
             setState = { props.stateSetter(it) }
             externalStates = props.externalStates

@@ -1,6 +1,5 @@
 package projects.shuffle
 
-import css.Classes
 import emotion.react.css
 import react.FC
 import react.Props
@@ -8,8 +7,7 @@ import react.dom.html.ReactHTML
 
 val Implementation = FC<Props> {
     ReactHTML.div {
-        css(Classes.text)
-
+        
         ReactHTML.p {
             +"TODO explanation of Code"
         }

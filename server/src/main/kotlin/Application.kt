@@ -1,3 +1,6 @@
+import data.CSS
+import data.index
+import data.styles
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -9,33 +12,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import kotlinx.coroutines.coroutineScope
+import kotlinx.css.*
 import kotlinx.html.*
 import utils.logError
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
-
-fun HTML.index() {
-    head {
-        title("Domo")
-        meta {
-            name = "viewport"
-            content = "width=device-width, initial-scale=1.0"
-        }
-        link {
-            rel = "stylesheet"
-            href = "/static/shared.css"
-        }
-    }
-    body {
-        div {
-            id = "script-holder"
-            script(src = "/static/browser.js") { }
-        }
-        script(src = "/static/automaton.js") { async = true }
-        script(src = "/static/kdtree.js") { async = true }
-        script(src = "/static/shuffle.js") { async = true }
-    }
-}
 
 suspend fun main(): Unit = coroutineScope {
     /*
@@ -66,7 +47,6 @@ suspend fun main(): Unit = coroutineScope {
             }
             routing {
                 //createConnect4Websocket()
-                // TODO look into creating CSS with Ktor: https://ktor.io/docs/css-dsl.html#serve_css
                 get("/health") {
                     call.respondText("Healthy!")
                 }
@@ -75,6 +55,9 @@ suspend fun main(): Unit = coroutineScope {
                         """User-agent: *
                               |Allow: /""".trimMargin()
                     )
+                }
+                get("/static/styles.css") {
+                    call.respondCss(CssBuilder::styles)
                 }
                 get("/{...}") {
                     call.respondHtml(HttpStatusCode.OK, HTML::index)
@@ -88,3 +71,10 @@ suspend fun main(): Unit = coroutineScope {
 }
 
 private suspend fun ApplicationCall.respondText(text: String) = respondText(text = text, status = HttpStatusCode.OK)
+
+/**
+ * https://ktor.io/docs/css-dsl.html#serve_css
+ */
+private suspend inline fun ApplicationCall.respondCss(css: CSS) {
+    this.respondText(CssBuilder().apply(css).toString(), ContentType.Text.CSS)
+}

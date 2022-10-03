@@ -12,6 +12,8 @@ class Graph(size: Int) {
 
     val elements = new(size)
 
+    fun size() = elements.count()
+
     fun get(n: Int) = elements.find { it.value == n }
 
     fun reset(size: Int) {

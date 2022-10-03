@@ -11,11 +11,6 @@ object Classes {
         textAlign = TextAlign.center
     }
 
-    val text: CSS = {
-        textAlign = TextAlign.left
-        fontFamily = string("\"Lucida Console\", monospace")
-    }
-
     val canvas: CSS = {
         width = 100.pct
         maxWidth = 1000.px

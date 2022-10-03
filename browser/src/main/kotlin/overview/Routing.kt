@@ -1,7 +1,7 @@
 package overview
 
 import aboutme.AboutMeMenu
-import aboutpage.AboutPageMenu
+import aboutsite.AboutSiteMenu
 import menu.SubMenu
 import projects.ProjectsMenu
 import react.FC
@@ -14,7 +14,7 @@ import react.router.dom.BrowserRouter
 val Routing = FC<Props> {
     val routes = listOf(
         AboutMeMenu.routes(),
-        AboutPageMenu.routes(),
+        AboutSiteMenu.routes(),
         ProjectsMenu.routes()
     ).flatten()
 

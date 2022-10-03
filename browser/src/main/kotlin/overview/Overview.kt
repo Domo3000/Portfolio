@@ -1,7 +1,8 @@
 package overview
 
 import aboutme.AboutMeStates
-import css.Classes
+import css.ClassNames
+import css.and
 import csstype.Float
 import csstype.pct
 import csstype.px
@@ -32,7 +33,6 @@ class LoadingScreen {
 object NotFoundState : OverviewState {
     override val component = FC<Props> {
         div {
-            css(Classes.text)
             +"404 - Not Found"
         }
     }
@@ -48,18 +48,15 @@ fun overview(component: OverviewState = AboutMeStates.Intro) = FC<Props> {
         setExternalScripts { l -> l - key }
     }
 
-    div {
-        Header {
-            currentState = state
-            stateSetter = { setState(it) }
-            externalStates = loadingExternalScripts
-        }
+    Header {
+        currentState = state
+        stateSetter = { setState(it) }
+        externalStates = loadingExternalScripts
     }
 
     div {
         div {
-            id = "desktop-menu"
-            css {
+            css(ClassNames.desktopElement and "menu") {
                 width = 20.pct
                 float = Float.left
             }
@@ -73,7 +70,9 @@ fun overview(component: OverviewState = AboutMeStates.Intro) = FC<Props> {
             id = "content-holder"
             css {
                 width = 80.pct
+                maxWidth = 1000.px
                 minHeight = 600.px
+                paddingBottom = 100.px
                 float = Float.left
             }
 

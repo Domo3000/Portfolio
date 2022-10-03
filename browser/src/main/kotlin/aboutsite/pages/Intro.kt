@@ -1,8 +1,7 @@
-package aboutpage.pages
+package aboutsite.pages
 
 import aboutme.AboutMeMenu
-import aboutpage.AboutPageMenu
-import css.Classes
+import aboutsite.AboutSiteMenu
 import csstype.FontWeight
 import emotion.react.css
 import menu.SubMenu
@@ -40,8 +39,6 @@ private val list: FC<ListProps>
 
 val IntroComponent = FC<Props> {
     div {
-        css(Classes.text)
-
         p {
             +"This is a full-stack web application written in "
             a {
@@ -77,7 +74,7 @@ val IntroComponent = FC<Props> {
 
         details {
             summary {
-                +"About Me"
+                +AboutMeMenu.text
             }
             +"Information about the author"
             list {
@@ -86,16 +83,16 @@ val IntroComponent = FC<Props> {
         }
         details {
             summary {
-                +"About this page"
+                +AboutSiteMenu.text
             }
-            +"Information about this page"
+            +"Information about this site"
             list {
-                page = AboutPageMenu
+                page = AboutSiteMenu
             }
         }
         details {
             summary {
-                +"Projects"
+                +ProjectsMenu.text
             }
             +"Little showcases"
             list {

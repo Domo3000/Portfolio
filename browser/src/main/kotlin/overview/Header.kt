@@ -1,6 +1,8 @@
 package overview
 
 import css.Classes
+import css.ClassNames
+import css.and
 import csstype.*
 import emotion.react.css
 import react.FC
@@ -24,9 +26,8 @@ val Header = FC<HeaderProps> { props ->
         }
         id = "header"
         div {
-            id = "hamburger-icon"
             +"☰"
-            css {
+            css(ClassNames.phoneElement) {
                 textAlign = TextAlign.center
                 float = Float.left
                 minWidth = 30.px
@@ -46,12 +47,10 @@ val Header = FC<HeaderProps> { props ->
     }
 
     div {
-        id = "phone-menu"
-
         if (collapsed) {
             css(Classes.hidden)
         } else {
-            css {
+            css(ClassNames.phoneElement and "menu") {
                 zIndex = integer(5)
                 position = Position.absolute
                 top = 40.px

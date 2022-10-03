@@ -1,6 +1,5 @@
 package projects.automaton
 
-import css.Classes
 import csstype.FontWeight
 import emotion.react.css
 import react.FC
@@ -9,8 +8,7 @@ import react.dom.html.ReactHTML
 
 val Implementation = FC<Props> {
     ReactHTML.div {
-        css(Classes.text)
-
+        
         ReactHTML.p {
             css {
                 fontWeight = FontWeight.bold

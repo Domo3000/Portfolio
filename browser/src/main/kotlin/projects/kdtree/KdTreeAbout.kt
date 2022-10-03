@@ -1,6 +1,5 @@
 package projects.kdtree
 
-import css.Classes
 import csstype.*
 import emotion.react.css
 import react.FC
@@ -47,8 +46,7 @@ private val image: FC<ImageProps>
 
 val About = FC<Props> {
     div {
-        css(Classes.text)
-
+        
         p {
             css {
                 fontWeight = FontWeight.bold

@@ -1,9 +1,7 @@
 package aboutme.intro
 
-import aboutpage.AboutPageMenu
-import aboutpage.AboutPageStates
-import css.Classes
-import emotion.react.css
+import aboutsite.AboutSiteMenu
+import aboutsite.AboutSiteStates
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
@@ -13,10 +11,8 @@ import react.dom.html.ReactHTML.p
 
 val IntroComponent = FC<Props> {
     div {
-        css(Classes.text)
-
         p {
-            +"Welcome, this page is under construction!"
+            +"Welcome, this site is under construction!"
         }
 
         p {
@@ -36,10 +32,10 @@ val IntroComponent = FC<Props> {
         p {
             +"For an overview of this website visit the "
             a {
-                href = "/${AboutPageMenu.path}/${AboutPageStates.Intro.path}"
-                +"About this page"
+                href = "/${AboutSiteMenu.path}/${AboutSiteStates.Intro.path}"
+                +AboutSiteMenu.text
             }
-            +" section."
+            +" page."
         }
     }
 }

@@ -1,10 +1,9 @@
 package overview
 
 import aboutme.AboutMeMenu
-import css.Classes
 import aboutme.AboutMeStates
-import csstype.pct
-import csstype.px
+import css.Classes
+import csstype.Clear
 import emotion.react.css
 import kotlinx.browser.window
 import react.FC
@@ -18,12 +17,8 @@ external interface FooterProps : Props {
 
 val Footer = FC<FooterProps> { props ->
     div {
-        id = "footer"
         css {
-            width = 100.pct
-            maxHeight = 50.px
-            padding = 15.px
-            marginTop = 200.px
+            clear = Clear.left
         }
         h6 {
             css(Classes.centered)

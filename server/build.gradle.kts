@@ -23,7 +23,9 @@ dependencies {
     implementation("io.ktor:ktor-server-html-builder:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("ch.qos.logback:logback-classic:1.4.1")
+
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.388")
+    implementation("ch.qos.logback:logback-classic:1.2.11") // TODO 1.4.1
 
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-tests:$ktorVersion")

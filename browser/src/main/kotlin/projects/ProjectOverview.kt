@@ -32,9 +32,11 @@ abstract class ProjectOverview {
             val (state, setState) = useState<ProjectSubState>(ProjectSubStates.Play)
 
             ReactHTML.div {
-                css {
+                /*css {
                     maxWidth = 1000.px
                 }
+
+                 */
 
                 header?.let {
                     ReactHTML.h2 {
@@ -70,10 +72,6 @@ abstract class ProjectOverview {
             }
 
             ReactHTML.div {
-                css {
-                    maxWidth = 1000.px
-                }
-
                 when (state) {
                     ProjectSubStates.About -> aboutPage { }
                     ProjectSubStates.Implementation -> implementationPage { }

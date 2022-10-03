@@ -1,7 +1,5 @@
 package projects.kdtree
 
-import css.Classes
-import emotion.react.css
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
@@ -14,8 +12,6 @@ import react.dom.html.ReactHTML.ul
 
 val Implementation = FC<Props> {
     div {
-        css(Classes.text)
-
         p {
             +"This was the first project I made for this page."
         }
@@ -34,7 +30,7 @@ val Implementation = FC<Props> {
                 +"Coming from a mostly Backend background it was interesting to see how far HTML and JavaScript have developed."
             }
             p {
-                +"Tinkering around a bit helped me to figure out how to set the viewport, handle inputs, redraw on state change." // TODO better
+                +"Tinkering around a bit helped me to figure out how to set the viewport, handle inputs, redraw on state change."
             }
         }
         details {

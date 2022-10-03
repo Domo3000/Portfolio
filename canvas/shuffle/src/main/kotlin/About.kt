@@ -166,8 +166,6 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                css(Classes.text)
-
                 ReactHTML.p {
                     css {
                         fontWeight = FontWeight.bold
@@ -205,9 +203,6 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                css(Classes.text)
-
-
                 showDetails.position?.let { (x, y) ->
                     val element = state.decks[y][x].second
                     ReactHTML.p {
@@ -230,8 +225,6 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                css(Classes.text)
-
                 ReactHTML.details {
                     ReactHTML.summary {
                         +"k-Pile Shuffling Explanation"

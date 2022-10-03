@@ -5,13 +5,12 @@ import csstype.None
 import csstype.pct
 import emotion.react.css
 import org.w3c.dom.HTMLInputElement
-import react.FC
-import react.Props
 import react.dom.events.ChangeEventHandler
 import react.dom.html.InputType
 import react.dom.html.ReactHTML
 
 external interface SliderInputProps : Props {
+    var id: String?
     var value: String
     var min: Double
     var max: Double
@@ -21,6 +20,9 @@ external interface SliderInputProps : Props {
 
 val sliderInput = FC<SliderInputProps> { props ->
     ReactHTML.input {
+        props.id?.let {
+            id = it
+        }
         type = InputType.range
         min = props.min
         max = props.max

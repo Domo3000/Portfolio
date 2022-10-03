@@ -5,18 +5,101 @@ import canvas.clear
 import canvas.setDimensions
 import css.ClassNames
 import css.Classes
+import csstype.Color
 import csstype.Float
 import csstype.pct
 import csstype.px
 import emotion.react.css
 import kotlinx.browser.window
+import org.w3c.dom.CanvasRenderingContext2D
+import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import react.*
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.canvas
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.*
+
+external interface ColorProps : Props {
+    var text: String
+    var color: Int
+}
+
+val colorBlock = FC<ColorProps> { props ->
+    val colour = "hsl(${props.color},100%,50%)".unsafeCast<Color>() // TODO move to utils
+    ReactHTML.span {
+        css {
+            width = 20.px
+            height = 20.px
+            color = colour
+            backgroundColor = colour
+        }
+        +props.text
+    }
+}
+
+fun getColor(n: Int, size: Int) = (n * (360.0 / size)).toInt()
+
+class State(size: Int = 3) {
+    private val graph = Graph(size)
+
+    fun reset(size: Int) {
+        graph.reset(size)
+    }
+
+    val elements
+        get() = graph.elements
+
+    fun getX(x: Int, width: Int, factor: Double = 2.2) =
+        (width / 2.0) + ((width / factor) * cos(((x * (360.0 / graph.size())) - 90.0) * PI / 180.0))
+
+    fun getY(y: Int, height: Int, factor: Double = 2.2) =
+        (height / 2.0) + ((height / factor) * sin(((y * (360.0 / graph.size())) - 90.0) * PI / 180.0))
+
+    fun getColor(n: Int) = getColor(n, graph.size())
+
+    fun drawLine(
+        renderingContext: CanvasRenderingContext2D,
+        fromX: Double,
+        fromY: Double,
+        toX: Double,
+        toY: Double,
+        color: String
+    ) {
+        renderingContext.beginPath()
+        renderingContext.moveTo(fromX, fromY)
+        renderingContext.lineTo(toX, toY)
+        renderingContext.lineWidth = 2.0
+        renderingContext.strokeStyle = color
+        renderingContext.stroke()
+    }
+
+    // TODO move to utils
+    fun drawCircle(renderingContext: CanvasRenderingContext2D, x: Double, y: Double, color: String) {
+        renderingContext.beginPath()
+        renderingContext.arc(x, y, 5.0, 0.0, 2 * PI)
+        renderingContext.lineWidth = 5.0
+        renderingContext.stroke()
+    }
+
+    fun draw(canvasElement: HTMLCanvasElement, renderingContext: CanvasRenderingContext2D) {
+        graph.elements.forEach { element ->
+            val color = "hsl(${getColor(element.value)},100%,50%)"
+            val fromX = getX(element.value, canvasElement.width)
+            val fromY = getY(element.value, canvasElement.height)
+            element.outgoing.forEach { to ->
+                val toX = getX(to, canvasElement.width)
+                val toY = getY(to, canvasElement.height)
+                drawLine(renderingContext, fromX, fromY, toX, toY, color)
+            }
+            drawCircle(
+                renderingContext,
+                getX(element.value, canvasElement.width, 2.1),
+                getY(element.value, canvasElement.width, 2.1),
+                color
+            )
+        }
+    }
+}
 
 class TrippyAbout : ExternalCanvas() {
     override val name: String = "TrippyAbout"
@@ -26,41 +109,11 @@ class TrippyAbout : ExternalCanvas() {
     override val component: FC<Props>
         get() = FC {
             val (size, setSize) = useState(3)
-            val (state, _) = useState(Graph(size))
-
-            fun getX(x: Int, width: Int) =
-                (width / 2.0) + ((width / 2.1) * cos(((x * (360.0 / size)) - 90.0) * PI / 180.0))
-
-            fun getY(y: Int, height: Int) =
-                (height / 2.0) + ((height / 2.1) * sin(((y * (360.0 / size)) - 90.0) * PI / 180.0))
-
-            fun getColor(n: Int) = (n * (360.0 / size)).toInt()
-
-            fun drawLine(fromX: Double, fromY: Double, toX: Double, toY: Double, color: String) {
-                renderingContext.beginPath()
-                renderingContext.moveTo(fromX, fromY)
-                renderingContext.lineTo(toX, toY)
-                renderingContext.lineWidth = 2.0
-                renderingContext.strokeStyle = color
-                renderingContext.stroke()
-            }
-
-            fun drawState() {
-                state.elements.forEach { element ->
-                    val color = "hsl(${getColor(element.value)},100%,50%)"
-                    val fromX = getX(element.value, canvasElement.width)
-                    val fromY = getY(element.value, canvasElement.height)
-                    element.outgoing.forEach { to ->
-                        val toX = getX(to, canvasElement.width)
-                        val toY = getY(to, canvasElement.height)
-                        drawLine(fromX, fromY, toX, toY, color)
-                    }
-                }
-            }
+            val (state, _) = useState(State(size))
 
             fun draw() {
                 renderingContext.clear()
-                drawState()
+                state.draw(canvasElement, renderingContext)
             }
 
             val resizeHandler: (Event) -> Unit = {
@@ -85,7 +138,10 @@ class TrippyAbout : ExternalCanvas() {
                     max = 25.0
                     step = 2.0
                     onChange = {
-                        setSize(it.target.value.toDouble().toInt())
+                        val newSize = it.target.value.toDouble().toInt()
+                        state.reset(newSize)
+                        setSize(newSize)
+                        draw()
                     }
                 }
             }
@@ -127,12 +183,23 @@ class TrippyAbout : ExternalCanvas() {
                     ReactHTML.p {
                         +"The graphic shows how winning hands are calculated for a Rock Paper Scissor game with $size hand signs."
                     }
+                    ReactHTML.p {
+                        colorBlock {
+                            color = getColor(state.elements[0].value, size)
+                            text = "se"
+                        }
+                        +" defeats "
+                        colorBlock {
+                            color = getColor(state.elements[round(size / 3.0).toInt()].value, state.elements.size)
+                            text = "cr"
+                        }
+                        +" and gets defeated by "
+                        colorBlock {
+                            color = getColor(state.elements[round(size * 2 / 3.0).toInt()].value, state.elements.size)
+                            text = "et"
+                        }
+                    }
                 }
-            }
-
-            useEffect(size) {
-                state.reset(size)
-                draw()
             }
 
             useEffectOnce {

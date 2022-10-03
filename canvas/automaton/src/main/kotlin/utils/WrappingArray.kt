@@ -1,6 +1,6 @@
 package utils
 
-abstract class WrappingArray<T>(val sizeX: Int, val sizeY: Int) {
+abstract class WrappingArray<T>(var sizeX: Int, var sizeY: Int) { // TODO mutableSizeX
     abstract val elements: ArrayList<ArrayList<T>>
 
     fun get(x: Int, y: Int, default: T? = null): T = if (default == null) {

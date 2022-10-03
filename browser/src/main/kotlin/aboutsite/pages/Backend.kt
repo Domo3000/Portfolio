@@ -1,17 +1,14 @@
-package aboutpage.pages
+package aboutsite.pages
 
-import css.Classes
-import emotion.react.css
 import react.*
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.h3
 import react.dom.html.ReactHTML.p
 
 val BackendComponent = FC<Props> {
     div {
-        css(Classes.text)
-
-        p {
+        h3 {
             a {
                 href = "https://kotlinlang.org/docs/server-overview.html"
                 +"Kotlin/JVM"
