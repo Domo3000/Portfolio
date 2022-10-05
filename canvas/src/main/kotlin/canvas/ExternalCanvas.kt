@@ -42,6 +42,9 @@ abstract class ExternalCanvas(private val id: String = "external-holder") {
             cleanUp()
         })
         document.dispatchEvent(Event("${name}Initialized"))
+        window.setTimeout({
+            document.dispatchEvent(Event("${name}Initialized"))
+        }, 3000)
     }
 
     fun addEventListener(listener: EventListener) {

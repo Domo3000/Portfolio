@@ -44,7 +44,7 @@ tasks.withType<ShadowJar> {
         "Production"
     }
 
-    for(element in listOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle")) {
+    for(element in listOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle", "canvas:labyrinth")) {
         dependsOn(":$element:browser${environment}Webpack")
         val js = tasks.getByPath(":$element:browser${environment}Webpack") as KotlinWebpack
         into("assets") { from(File(js.destinationDirectory, js.outputFileName)) }

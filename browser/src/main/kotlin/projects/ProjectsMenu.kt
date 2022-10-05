@@ -5,6 +5,7 @@ import menu.SubmenuState
 import projects.automaton.AutomatonOverview
 import projects.connect4.Connect4Overview
 import projects.kdtree.KdTreeOverview
+import projects.labyrinth.LabyrinthOverview
 import projects.shuffle.ShuffleOverview
 import projects.trippy.TrippyOverview
 import react.FC
@@ -45,6 +46,13 @@ object ProjectStates {
         override val component: FC<Props>
             get() = ShuffleOverview.create
     }
+    object Labyrinth: ExternalProjectState {
+        override val text: String = "Labyrinth"
+        override val path: String = text.lowercase()
+        override val externalName = text
+        override val component: FC<Props>
+            get() = LabyrinthOverview.create
+    }
     object Connect4: ProjectState { // Deactivated for now
         override val text: String = "Connect4"
         override val path: String = "connect-four"
@@ -52,7 +60,7 @@ object ProjectStates {
             get() = Connect4Overview.create
     }
 
-    val states = listOf(KdTree, Automaton, Trippy, Shuffle)
+    val states = listOf(KdTree, Automaton, Trippy, Shuffle, Labyrinth)
 }
 
 object ProjectsMenu : SubMenu(ProjectStates.KdTree) {
