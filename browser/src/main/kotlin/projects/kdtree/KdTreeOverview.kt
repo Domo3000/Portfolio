@@ -6,6 +6,7 @@ import react.FC
 import react.Props
 
 object KdTreeOverview : ProjectOverview() {
+    override val header = "KdTree"
     override val aboutPage: FC<Props>
         get() = About
     override val implementationPage: FC<Props>

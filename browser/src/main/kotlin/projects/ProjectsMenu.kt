@@ -4,6 +4,7 @@ import menu.SubMenu
 import menu.SubmenuState
 import projects.automaton.AutomatonOverview
 import projects.connect4.Connect4Overview
+import projects.debug.DebugPage
 import projects.kdtree.KdTreeOverview
 import projects.shuffle.ShuffleOverview
 import projects.trippy.TrippyOverview
@@ -45,6 +46,13 @@ object ProjectStates {
         override val component: FC<Props>
             get() = ShuffleOverview.create
     }
+    object Debug: ExternalProjectState {
+        override val text: String = "Debug"
+        override val path: String = text.lowercase()
+        override val externalName = text
+        override val component: FC<Props>
+            get() = DebugPage
+    }
     object Connect4: ProjectState { // Deactivated for now
         override val text: String = "Connect4"
         override val path: String = "connect-four"
@@ -52,7 +60,7 @@ object ProjectStates {
             get() = Connect4Overview.create
     }
 
-    val states = listOf(KdTree, Automaton, Trippy, Shuffle)
+    val states = listOf(KdTree, Automaton, Trippy, Shuffle, Debug)
 }
 
 object ProjectsMenu : SubMenu(ProjectStates.KdTree) {

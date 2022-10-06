@@ -9,16 +9,11 @@ kotlin {
             runTask {
                 outputFileName = "shuffle.js"
             }
-            /*
             testTask {
                 useKarma {
                     useFirefox()
-                    useChrome()
-                    useSafari()
                 }
             }
-
-             */
         }
     }
 }

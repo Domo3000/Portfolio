@@ -9,6 +9,11 @@ kotlin {
             runTask {
                 outputFileName = "kdtree.js"
             }
+            testTask {
+                useKarma {
+                    useFirefox()
+                }
+            }
         }
     }
 }

@@ -1,6 +1,3 @@
-package projects.shuffle
-
-import Deck
 import kotlin.test.*
 
 class DeckTest {

@@ -2,10 +2,10 @@ package trippy
 
 import canvas.ExternalCanvas
 import canvas.clear
+import canvas.drawCircle
 import canvas.setDimensions
 import css.ClassNames
 import css.Classes
-import csstype.Color
 import csstype.Float
 import csstype.pct
 import csstype.px
@@ -17,7 +17,10 @@ import org.w3c.dom.events.Event
 import react.*
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.canvas
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.text.Typography.nbsp
 
 external interface ColorProps : Props {
     var text: String
@@ -25,7 +28,7 @@ external interface ColorProps : Props {
 }
 
 val colorBlock = FC<ColorProps> { props ->
-    val colour = "hsl(${props.color},100%,50%)".unsafeCast<Color>() // TODO move to utils
+    val colour = props.color.hslColor()
     ReactHTML.span {
         css {
             width = 20.px
@@ -73,14 +76,6 @@ class State(size: Int = 3) {
         renderingContext.stroke()
     }
 
-    // TODO move to utils
-    fun drawCircle(renderingContext: CanvasRenderingContext2D, x: Double, y: Double, color: String) {
-        renderingContext.beginPath()
-        renderingContext.arc(x, y, 5.0, 0.0, 2 * PI)
-        renderingContext.lineWidth = 5.0
-        renderingContext.stroke()
-    }
-
     fun draw(canvasElement: HTMLCanvasElement, renderingContext: CanvasRenderingContext2D) {
         graph.elements.forEach { element ->
             val color = "hsl(${getColor(element.value)},100%,50%)"
@@ -91,11 +86,10 @@ class State(size: Int = 3) {
                 val toY = getY(to, canvasElement.height)
                 drawLine(renderingContext, fromX, fromY, toX, toY, color)
             }
-            drawCircle(
-                renderingContext,
+            renderingContext.drawCircle(
                 getX(element.value, canvasElement.width, 2.1),
                 getY(element.value, canvasElement.width, 2.1),
-                color
+                10.0
             )
         }
     }
@@ -152,7 +146,10 @@ class TrippyAbout : ExternalCanvas() {
                         +"Cellular Automata"
                     }
                     ReactHTML.p {
-                        +"This is another example of a cellular automaton, where the next state is calculated by looking at the neighbors of each cell."
+                        +"This is another example of a cellular automaton."
+                    }
+                    ReactHTML.p {
+                        +"The next state is calculated by looking at the neighbors of each cell and playing Rock Paper Scissors."
                     }
                 }
 
@@ -169,10 +166,10 @@ class TrippyAbout : ExternalCanvas() {
                         +" which looks at the 8 cells surrounding a cell."
                     }
                     ReactHTML.p {
-                        +"For each cell it checks if there's more than the threshold of a hand sign that defeats it in its neighborhood." // TODO rewrite
+                        +"For each cell it checks if there's more than the threshold of a hand sign that defeats it in its neighborhood."
                     }
                     ReactHTML.p {
-                        +"For each battle the threshold will randomly be set to 2 or 3." // TODO slider?
+                        +"If there's the same amount of different hands of winning neighbors it chooses a random one."
                     }
                 }
 
@@ -183,21 +180,42 @@ class TrippyAbout : ExternalCanvas() {
                     ReactHTML.p {
                         +"The graphic shows how winning hands are calculated for a Rock Paper Scissor game with $size hand signs."
                     }
+                    val node = state.elements[0]
                     ReactHTML.p {
                         colorBlock {
-                            color = getColor(state.elements[0].value, size)
-                            text = "se"
+                            color = getColor(node.value, size)
+                            text = "$nbsp$nbsp"
                         }
                         +" defeats "
-                        colorBlock {
-                            color = getColor(state.elements[round(size / 3.0).toInt()].value, state.elements.size)
-                            text = "cr"
+                        node.outgoing.forEach {
+                            colorBlock {
+                                color = getColor(state.elements[it].value, state.elements.size)
+                                text = "$nbsp$nbsp"
+                            }
                         }
-                        +" and gets defeated by "
+                    }
+                    ReactHTML.p {
                         colorBlock {
-                            color = getColor(state.elements[round(size * 2 / 3.0).toInt()].value, state.elements.size)
-                            text = "et"
+                            color = getColor(node.value, size)
+                            text = "$nbsp$nbsp"
                         }
+                        +" gets defeated by "
+                        node.incoming.reversed().forEach {
+                            colorBlock {
+                                color = getColor(state.elements[it].value, state.elements.size)
+                                text = "$nbsp$nbsp"
+                            }
+                        }
+                    }
+                }
+
+                ReactHTML.details {
+                    ReactHTML.summary {
+                        +"Idea"
+                    }
+                    ReactHTML.a {
+                        href = "https://softologyblog.wordpress.com/2018/03/23/rock-paper-scissors-cellular-automata/"
+                        +"Softology's Blog"
                     }
                 }
             }

@@ -40,12 +40,21 @@ object NotFoundState : OverviewState {
 
 fun overview(component: OverviewState = AboutMeStates.Intro) = FC<Props> {
     val (state, setState) = useState(component)
-    val (loadingExternalScripts, setExternalScripts) = useState(
+    val (loadingExternalScripts, setLoadingExternalScripts) = useState(
         ProjectStates.states.map { it.externalName }
     )
+    /**
+     *  To prevent race conditions from causing issues ExternalCanvas sends <name>Initialized twice.
+     *  If we remove the contains() or check on loadingExternalScripts the pages get reloaded if they get enabled again.
+     *  Play around with the Debug Project for an explanation.
+     */
+    val mutableExternalScripts = loadingExternalScripts.toMutableList()
 
     fun enable(key: String) {
-        setExternalScripts { l -> l - key }
+        if (mutableExternalScripts.contains(key)) {
+            mutableExternalScripts.remove(key)
+            setLoadingExternalScripts { l -> l - key }
+        }
     }
 
     Header {

@@ -65,7 +65,7 @@ val IntroComponent = FC<Props> {
             }
         }
 
-        p {
+        p { // TODO strong, h4 or something, follow some styleguide
             css {
                 fontWeight = FontWeight.bold
             }

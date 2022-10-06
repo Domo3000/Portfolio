@@ -1,7 +1,11 @@
 package utils
 
-abstract class WrappingArray<T>(var sizeX: Int, var sizeY: Int) { // TODO mutableSizeX
-    abstract val elements: ArrayList<ArrayList<T>>
+abstract class WrappingArray<T>(var sizeX: Int, var sizeY: Int) {
+    val elements: MutableList<MutableList<T>> by lazy {
+        (0 until sizeY).map { y -> (0 until sizeX).map { x -> init(x, y) }.toMutableList() }.toMutableList()
+    }
+
+    abstract fun init(x: Int, y: Int): T
 
     fun get(x: Int, y: Int, default: T? = null): T = if (default == null) {
         elements[y mod sizeY][x mod sizeX]
@@ -20,7 +24,4 @@ abstract class WrappingArray<T>(var sizeX: Int, var sizeY: Int) { // TODO mutabl
             }
         }
     }
-
 }
-
-fun <T> Array<T>.toArrayList(): ArrayList<T> = ArrayList(this.toList())

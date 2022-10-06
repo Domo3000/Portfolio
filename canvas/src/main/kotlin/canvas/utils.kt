@@ -3,6 +3,7 @@ package canvas
 import csstype.NamedColor
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.PI
 import kotlin.math.floor
 
 fun HTMLCanvasElement.getElementWidth(size: Int) = width.toDouble() / size
@@ -62,4 +63,14 @@ fun CanvasRenderingContext2D.drawRectangle(x: Int, y: Int, sizeX: Int, sizeY: In
         floor(elementWidth),
         floor(elementHeight)
     )
+}
+
+fun CanvasRenderingContext2D.drawCircle(x: Double, y: Double, radius: Double, color: String? = null) {
+    color?.let {
+        fillStyle = it
+    }
+    beginPath()
+    arc(x, y, radius / 2.0, 0.0, 2 * PI)
+    lineWidth = radius
+    stroke()
 }

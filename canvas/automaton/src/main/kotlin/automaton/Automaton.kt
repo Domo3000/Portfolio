@@ -19,8 +19,7 @@ import kotlin.js.Date
 import kotlin.random.Random
 
 class BooleanArray(x: Int, y: Int) : WrappingArray<Boolean>(x, y) {
-    override val elements: ArrayList<ArrayList<Boolean>> =
-        ArrayList((0 until sizeY).map { ArrayList((0 until sizeX).map { false }) })
+    override fun init(x: Int, y: Int): Boolean = false
 
     fun getParentValue(x: Int, y: Int, default: Boolean?) = Rule.toNumber(
         get(x - 1, y - 1, default),
@@ -130,8 +129,8 @@ class Automaton : ExternalCanvas() {
                     margin = Auto.auto
                 }
                 canvas {
-                        css(Classes.canvas)
-                        id = canvasId
+                    css(Classes.canvas)
+                    id = canvasId
                 }
 
                 ReactHTML.div {

@@ -9,6 +9,11 @@ kotlin {
             runTask {
                 outputFileName = "automaton.js"
             }
+            testTask {
+                useKarma {
+                    useFirefox()
+                }
+            }
         }
     }
 }

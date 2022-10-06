@@ -17,38 +17,27 @@ import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.label
 import utils.WrappingArray
 import utils.mod
-import utils.toArrayList
 import kotlin.js.Date
 import kotlin.random.Random
-
-private typealias Position = Pair<Int, Int>
-
-class LookupMap(size: Int) { // TODO test if actually faster than directly accessing
-    private val graph = Graph(size)
-    private val map: HashMap<Pair<Int, Int>, Boolean> = hashMapOf()
-
-    fun defeats(defender: Int, fighter: Int) = map.getOrPut(defender to fighter) {
-        graph.get(defender)!!.incoming.contains(fighter)
-    }
-}
 
 class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
     var states = s
     var threshold = 1
     var randomMod = 2
-    private var lookupMap = LookupMap(states)
     private val random = Random(Date.now().toInt())
 
-    override val elements: ArrayList<ArrayList<Int>> = Array(sizeY) {
-        Array(sizeX) {
-            random.nextInt() mod states
-        }.toArrayList()
-    }.toArrayList()
+    override fun init(x: Int, y: Int): Int = random.nextInt() mod states
 
-    private val withPosition
-        get() = elements.mapIndexed { y, list ->
-            list.mapIndexed { x, element -> Position(x, y) to element }
-        }.flatten()
+    /*
+        true if fighter wins
+    */
+    fun fight(defender: Int, fighter: Int): Boolean = if (defender == fighter) {
+        false
+    } else if (defender > fighter) {
+        defender - fighter <= states / 2
+    } else {
+        states - fighter + defender <= states / 2
+    }
 
     fun randomize() {
         setAll { _, _ ->
@@ -58,7 +47,6 @@ class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
 
     fun setStates(s: Int) {
         states = s
-        lookupMap = LookupMap(states)
         setAll { _, _ ->
             random.nextInt() mod states
         }
@@ -73,44 +61,47 @@ class ElementArray(x: Int, y: Int, s: Int) : WrappingArray<Int>(x, y) {
             Array(sizeY) {
                 Array(sizeX) {
                     random.nextInt() mod states
-                }.toArrayList()
-            }.toArrayList()
+                }.toMutableList()
+            }.toMutableList()
         )
     }
 
     fun runStep() {
-        withPosition.map { (position, node) ->
-            val incoming = (-1..1).map { offsetY ->
-                (-1..1).mapNotNull { offsetX ->
-                    if (offsetX == 0 && offsetY == 0) {
-                        null
-                    } else {
-                        get(position.first + offsetX, position.second + offsetY)
+        val next: List<List<Int>> = elements.mapIndexed { y, list ->
+            list.mapIndexed { x, element ->
+                val incoming = (-1..1).map { offsetY ->
+                    (-1..1).mapNotNull { offsetX ->
+                        if (offsetX == 0 && offsetY == 0) {
+                            null
+                        } else {
+                            get(x + offsetX, y + offsetY)
+                        }
                     }
-                }
-            }.flatten().filter {
-                lookupMap.defeats(node, it)
-            }
+                }.flatten().filter { fight(element, it) }
 
-            position to incoming
-        }.forEach { (position, incoming) ->
-            incoming.distinct().map { n -> n to incoming.count { n == it } }.maxByOrNull { it.second }
-                ?.let { (n, count) ->
-                    val r = if (randomMod == 0) {
+                val grouping = incoming.groupingBy { it }.eachCount()
+                grouping.maxByOrNull { it.value }?.let { entry ->
+                    val count = entry.value
+
+                    val r = if (randomMod == 1) {
                         0
                     } else {
                         (random.nextInt() mod randomMod)
                     }
 
                     if (count > threshold + r) {
-                        set(position.first, position.second, n)
+                        grouping.filter { it.value == count }.keys.random()
+                    } else {
+                        null
                     }
-                }
+                } ?: element
+            }
         }
+        elements.clear()
+        elements.addAll(next.map { ArrayList(it) })
     }
 }
 
-// TODO optimize
 class Trippy : ExternalCanvas() {
     override val name: String = "Trippy"
 
@@ -118,7 +109,7 @@ class Trippy : ExternalCanvas() {
 
     override val component: FC<Props>
         get() = FC {
-            val (size, setSize) = useState(200)
+            val (size, setSize) = useState(100)
             val (threshold, setThreshold) = useState(1)
             val (randomMod, setRandomMod) = useState(2)
             val (states, setStates) = useState(3)
@@ -188,7 +179,7 @@ class Trippy : ExternalCanvas() {
                 type = InputType.range
                 min = "40.0"
                 max = "400.0"
-                step = 20.0
+                step = 50.0
                 value = size.toString()
                 list = "list"
                 css {
@@ -201,14 +192,20 @@ class Trippy : ExternalCanvas() {
                     stop()
 
                     val allowedValues = listOf(40, 100, 160, 200, 400)
-
                     val newSize = it.target.value.toDouble().toInt()
 
-                    if (allowedValues.contains(newSize)) {
-                        setSize(newSize)
-                        state.setSize(newSize)
+                    allowedValues.mapIndexed { index, value ->
+                        val previous: Int? = allowedValues.getOrNull(index - 1)?.let { prev ->
+                            (value + prev) / 2
+                        }
+                        val next: Int? = allowedValues.getOrNull(index + 1)?.let { next ->
+                            (value + next) / 2
+                        }
+                        (previous?: value)..(next?: value) to value
+                    }.find { (range, _) -> newSize in range }?.let { (_, value) ->
+                        setSize(value)
+                        state.setSize(value)
                         drawState()
-                        console.log("$size")
                     }
                 }
             }
@@ -236,7 +233,7 @@ class Trippy : ExternalCanvas() {
             sliderInput {
                 id = "thresholdInput"
                 value = threshold.toDouble().toString()
-                min = 1.0
+                min = 0.0
                 max = 3.0
                 step = 1.0
                 onChange = {
@@ -249,13 +246,18 @@ class Trippy : ExternalCanvas() {
 
             label {
                 htmlFor = "randomInput"
-                +"Random Threshold: $randomMod"
+                val r = if (randomMod == 1) {
+                    "0"
+                } else {
+                    "0 - ${randomMod - 1}"
+                }
+                +"Random Threshold: $r"
             }
             sliderInput {
                 id = "randomInput"
                 value = randomMod.toDouble().toString()
-                min = 0.0
-                max = 3.0
+                min = 1.0
+                max = 4.0
                 step = 1.0
                 onChange = {
                     stop()

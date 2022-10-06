@@ -32,12 +32,6 @@ abstract class ProjectOverview {
             val (state, setState) = useState<ProjectSubState>(ProjectSubStates.Play)
 
             ReactHTML.div {
-                /*css {
-                    maxWidth = 1000.px
-                }
-
-                 */
-
                 header?.let {
                     ReactHTML.h2 {
                         css {
@@ -49,10 +43,6 @@ abstract class ProjectOverview {
             }
 
             ReactHTML.div {
-                css {
-                    maxWidth = 1000.px
-                }
-
                 states.forEach { contentState ->
                     ReactHTML.div {
                         +contentState::class.simpleName!!

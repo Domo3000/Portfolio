@@ -1,4 +1,6 @@
-import canvas.*
+import canvas.ExternalCanvas
+import canvas.clear
+import canvas.setDimensions
 import css.ClassNames
 import css.Classes
 import csstype.Float
@@ -91,6 +93,22 @@ class Debug : ExternalCanvas() {
                 incrementPresses()
 
                 draw()
+            }
+
+            val keydownHandler: (Event) -> Unit = { event ->
+                if( (event as KeyboardEvent).key == "Escape" ) {
+                    setImmutableString("")
+                    mutableStringState = ""
+                    stringHolderState.s = ""
+                    mutableString = ""
+                    setImmutableList(emptyList())
+                    mutableListState.clear()
+                    mutableList.clear()
+                    setPressesState(0)
+                    pressesHolderState.n = 0
+                    mutablePresses = 0
+                    draw()
+                }
             }
 
             ReactHTML.div {
@@ -215,7 +233,15 @@ class Debug : ExternalCanvas() {
                     }
                 } else {
                     elements().forEach { (text, value) ->
-                        ReactHTML.p { +"$text: $value" }
+                        ReactHTML.p {
+                            css {
+                                margin = 0.px
+                            }
+                            ReactHTML.strong {
+                                +text
+                            }
+                            +": $value"
+                        }
                     }
                 }
             }
@@ -224,6 +250,7 @@ class Debug : ExternalCanvas() {
                 canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
                 addEventListener("keypress" to keypressHandler)
+                addEventListener("keydown" to keydownHandler)
                 draw()
             }
         }
