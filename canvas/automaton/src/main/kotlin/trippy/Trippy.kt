@@ -269,7 +269,6 @@ class Trippy : ExternalCanvas() {
 
             button {
                 text = if (running) "Stop" else "Play"
-                disabled = false
                 width = 100.0
                 onClick = {
                     setRunning(!running)
@@ -281,7 +280,6 @@ class Trippy : ExternalCanvas() {
 
             button {
                 text = "Randomize"
-                disabled = false
                 width = 100.0
                 onClick = {
                     stop()
@@ -298,7 +296,6 @@ class Trippy : ExternalCanvas() {
             useEffectOnce {
                 canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
-
                 drawState()
                 frameId = window.requestAnimationFrame { run() }
             }

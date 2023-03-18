@@ -6,9 +6,6 @@ kotlin {
     js {
         binaries.executable()
         browser {
-            runTask {
-                outputFileName = "kdtree.js"
-            }
             testTask {
                 useKarma {
                     useFirefox()

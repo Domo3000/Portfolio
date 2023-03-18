@@ -14,9 +14,9 @@ import react.dom.html.ReactHTML
 
 external interface ButtonProps : Props {
     var text: String
-    var disabled: Boolean
+    var disabled: Boolean?
     var onClick: MouseEventHandler<HTMLButtonElement>
-    var width: Double
+    var width: Double?
 }
 
 typealias Button = Triple<String, Boolean, MouseEventHandler<HTMLButtonElement>>
@@ -42,14 +42,16 @@ val button = FC<ButtonProps> { props ->
     ReactHTML.button {
         +props.text
         css {
-            width = props.width.pct
+            width = props.width?.pct ?: 100.0.pct
             padding = 15.px
-            float = Float.left
-            if (props.disabled) {
+            //float = Float.left
+            if (props.disabled == true) {
                 textDecoration = TextDecoration.lineThrough
             }
         }
         onClick = props.onClick
-        disabled = props.disabled
+        props.disabled?.let {
+            disabled = it
+        }
     }
 }

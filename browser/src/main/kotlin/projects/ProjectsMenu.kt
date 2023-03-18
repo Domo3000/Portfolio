@@ -6,6 +6,7 @@ import projects.automaton.AutomatonOverview
 import projects.connect4.Connect4Overview
 import projects.debug.DebugPage
 import projects.kdtree.KdTreeOverview
+import projects.labyrinth.LabyrinthOverview
 import projects.shuffle.ShuffleOverview
 import projects.trippy.TrippyOverview
 import react.FC
@@ -46,6 +47,20 @@ object ProjectStates {
         override val component: FC<Props>
             get() = ShuffleOverview.create
     }
+    object Labyrinth: ExternalProjectState {
+        override val text: String = "Labyrinth"
+        override val path: String = text.lowercase()
+        override val externalName = text
+        override val component: FC<Props>
+            get() = LabyrinthOverview.create
+    }
+    object Connect4: ExternalProjectState {
+        override val text: String = "Connect4"
+        override val path: String = "connect-four"
+        override val externalName = text
+        override val component: FC<Props>
+            get() = Connect4Overview.create
+    }
     object Debug: ExternalProjectState {
         override val text: String = "Debug"
         override val path: String = text.lowercase()
@@ -53,14 +68,8 @@ object ProjectStates {
         override val component: FC<Props>
             get() = DebugPage
     }
-    object Connect4: ProjectState { // Deactivated for now
-        override val text: String = "Connect4"
-        override val path: String = "connect-four"
-        override val component: FC<Props>
-            get() = Connect4Overview.create
-    }
 
-    val states = listOf(KdTree, Automaton, Trippy, Shuffle, Debug)
+    val states = listOf(KdTree, Automaton, Trippy, Shuffle, Labyrinth, Connect4, Debug)
 }
 
 object ProjectsMenu : SubMenu(ProjectStates.KdTree) {

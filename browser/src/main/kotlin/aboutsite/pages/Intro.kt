@@ -13,6 +13,7 @@ import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.li
 import react.dom.html.ReactHTML.p
+import react.dom.html.ReactHTML.strong
 import react.dom.html.ReactHTML.summary
 import react.dom.html.ReactHTML.ul
 
@@ -49,26 +50,15 @@ val IntroComponent = FC<Props> {
         }
 
         p {
-            +"I'm using the "
-            a {
-                href = "https://github.com/johnrengelman/shadow"
-                +"Shadow Plugin"
-            }
-            +" to create a Fat JAR."
-        }
-
-        p {
-            +"Source code is available here: "
+            +"Source code is available on "
             a {
                 href = "https://github.com/Domo3000/Portfolio"
                 +"Github"
             }
+            +", but this site is also trying to be self-documenting."
         }
 
-        p { // TODO strong, h4 or something, follow some styleguide
-            css {
-                fontWeight = FontWeight.bold
-            }
+        strong { // TODO strong, h4 or something, follow some styleguide
             +"Pages:"
         }
 

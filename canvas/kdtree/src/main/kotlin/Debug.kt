@@ -16,7 +16,7 @@ import react.dom.html.ReactHTML
 class StringHolder(var s: String)
 class IntHolder(var n: Int)
 
-// TODO own package?
+// TODO move to own package
 class Debug : ExternalCanvas() {
     override val name: String = "Debug"
 

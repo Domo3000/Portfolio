@@ -15,16 +15,18 @@ val IntroComponent = FC<Props> {
             +"Welcome, this site is under construction!"
         }
 
+        br { }
+
         p {
             +"Dominik Leys"
         }
 
         p {
-            +"Software Engineer, Vienna"
+            +"Software Engineer from Vienna"
         }
 
         p {
-            +"Experience: Java, Kotlin, Scala"
+            +"Experience: mostly Java, Kotlin and Scala"
         }
 
         br { }

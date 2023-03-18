@@ -8,6 +8,7 @@ import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.p
+import react.dom.html.ReactHTML.strong
 
 external interface ImageProps : Props {
     var imageSource: String
@@ -46,11 +47,7 @@ private val image: FC<ImageProps>
 
 val About = FC<Props> {
     div {
-        
-        p {
-            css {
-                fontWeight = FontWeight.bold
-            }
+        strong {
             +"k-d Tree meets Mondrian"
         }
         div {

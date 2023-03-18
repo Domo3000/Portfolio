@@ -1,6 +1,7 @@
 package aboutme
 
 import aboutme.impressum.ImpressumComponent
+import aboutme.information.InformationComponent
 import aboutme.intro.IntroComponent
 import menu.SubMenu
 import menu.SubmenuState
@@ -16,6 +17,12 @@ object AboutMeStates {
         override val component: FC<Props>
             get() = IntroComponent
     }
+    object Information : AboutMeState {
+        override val text: String = "Information"
+        override val path: String = text.lowercase()
+        override val component: FC<Props>
+            get() = InformationComponent
+    }
     object Impressum : AboutMeState {
         override val text: String = "Impressum"
         override val path: String = text.lowercase()
@@ -23,7 +30,7 @@ object AboutMeStates {
             get() = ImpressumComponent
     }
 
-    val states = listOf(Intro, Impressum)
+    val states = listOf(Intro, Information, Impressum)
 }
 
 object AboutMeMenu : SubMenu(AboutMeStates.Intro) {

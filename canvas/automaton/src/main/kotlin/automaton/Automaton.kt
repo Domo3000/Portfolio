@@ -173,7 +173,6 @@ class Automaton : ExternalCanvas() {
                     }
                     button {
                         text = if (running) "Stop" else "Play at ${delay}ms"
-                        disabled = false
                         width = 100.0
                         onClick = {
                             setRunning(!running)

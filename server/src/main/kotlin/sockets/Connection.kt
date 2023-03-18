@@ -9,4 +9,6 @@ class Connection(val session: DefaultWebSocketSession, var timeStamp: Long = Sys
     }
 
     val id = lastId.getAndIncrement()
+
+    override fun toString(): String = "Connection(id=$id, timeStamp=$timeStamp)"
 }

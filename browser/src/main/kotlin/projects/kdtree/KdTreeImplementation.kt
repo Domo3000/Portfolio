@@ -2,6 +2,7 @@ package projects.kdtree
 
 import react.FC
 import react.Props
+import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
@@ -14,6 +15,12 @@ val Implementation = FC<Props> {
     div {
         p {
             +"This was the first project I made for this page."
+        }
+        ReactHTML.p {
+            ReactHTML.a {
+                href = "https://github.com/Domo3000/Portfolio/tree/main/canvas/kdtree/src/main/kotlin"
+                +"Source Code"
+            }
         }
         p {
             +"The implementation included:"

@@ -6,9 +6,6 @@ kotlin {
     js {
         binaries.executable()
         browser {
-            runTask {
-                outputFileName = "automaton.js"
-            }
             testTask {
                 useKarma {
                     useFirefox()

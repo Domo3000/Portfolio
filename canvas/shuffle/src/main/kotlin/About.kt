@@ -11,7 +11,7 @@ import react.dom.html.ReactHTML
 import kotlin.math.log
 import kotlin.math.pow
 
-private data class ShuffleCounter(val deck: Deck, var counter: Int = 0, var finished: Boolean = false)
+private data class ShuffleCounter(val deck: Deck, var counter: Long = 0, var finished: Boolean = false)
 
 private data class Details(val position: Position? = null)
 
@@ -72,8 +72,8 @@ class About : ExternalCanvas() {
                 else -> 20.0
             }
 
-            fun getColor(n: Int): String {
-                if (n == 0) {
+            fun getColor(n: Long): String {
+                if (n == 0L) {
                     return "DimGray"
                 }
 
@@ -97,7 +97,7 @@ class About : ExternalCanvas() {
                 val elementWidth = canvasElement.getElementWidth(state.size)
                 val elementHeight = canvasElement.getElementHeight(state.size)
 
-                renderingContext.fillStyle = getColor(element?.counter ?: 0)
+                renderingContext.fillStyle = getColor(element?.counter ?: 0L)
                 renderingContext.fillRect(
                     x,
                     y,
@@ -306,7 +306,7 @@ class About : ExternalCanvas() {
                     val power = getPower(size).toInt()
 
                     (0..power).forEach {
-                        val n = 2.0.pow(it).toInt()
+                        val n = 2.0.pow(it).toLong()
                         ReactHTML.div {
                             css {
                                 backgroundColor = Color(getColor(n))

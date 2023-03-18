@@ -15,7 +15,7 @@ import kotlin.reflect.KClass
 
 external interface SubMenuElementProps : Props {
     var currentState: OverviewState
-    var disabled: Boolean
+    var disabled: Boolean?
     var click: (SubmenuState) -> Unit
 }
 
@@ -39,7 +39,7 @@ interface SubmenuState : OverviewState {
                         fontWeight = FontWeight.bold
                     }
 
-                    if (props.disabled) {
+                    if (props.disabled == true) {
                         textDecoration = TextDecoration.lineThrough
                     }
                 }
@@ -80,10 +80,9 @@ abstract class SubMenu(private val initialSubState: SubmenuState) {
                     } else {
                         element.element {
                             currentState = props.currentState
-                            disabled = false
                             click =
                                 {
-                                    window.history.replaceState(Unit,"Domo","/$path/${element.path}")
+                                    window.history.replaceState(Unit, "Domo", "/$path/${element.path}")
                                     props.setState(it)
                                 }
                         }

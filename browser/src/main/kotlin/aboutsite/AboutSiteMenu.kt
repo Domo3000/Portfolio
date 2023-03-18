@@ -1,6 +1,8 @@
 package aboutsite
 
 import aboutsite.pages.*
+import aboutsite.pages.backend.BackendComponent
+import aboutsite.pages.backend.ProjectComponent
 import aboutsite.pages.frontend.CSSComponent
 import aboutsite.pages.frontend.FrontendComponent
 import menu.SubMenu
@@ -16,6 +18,13 @@ object AboutSiteStates {
         override val path: String = text.lowercase()
         override val component: FC<Props>
             get() = IntroComponent
+    }
+
+    object Project : AboutSiteState {
+        override val text: String = "Project"
+        override val path: String = text.lowercase()
+        override val component: FC<Props>
+            get() = ProjectComponent
     }
 
     object Backend : AboutSiteState {
@@ -39,7 +48,7 @@ object AboutSiteStates {
             get() = CSSComponent
     }
 
-    val states = listOf(Intro, Backend, Frontend, CSS)
+    val states = listOf(Intro, Project, Backend, Frontend, CSS)
 }
 
 object AboutSiteMenu : SubMenu(AboutSiteStates.Intro) {

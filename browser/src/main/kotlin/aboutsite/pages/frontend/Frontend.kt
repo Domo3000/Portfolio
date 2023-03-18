@@ -1,18 +1,11 @@
 package aboutsite.pages.frontend
 
-import csstype.Clear
-import csstype.FontStyle
-import emotion.react.css
-import projects.externalCanvas
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
-import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h3
 import react.dom.html.ReactHTML.p
-import react.dom.html.ReactHTML.span
-import react.dom.html.ReactHTML.summary
 
 val FrontendComponent = FC<Props> {
     div {

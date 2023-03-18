@@ -6,7 +6,7 @@ kotlin {
     js {
         binaries.executable()
         browser {
-            runTask {
+            webpackTask {
                 outputFileName = "shuffle.js"
             }
             testTask {

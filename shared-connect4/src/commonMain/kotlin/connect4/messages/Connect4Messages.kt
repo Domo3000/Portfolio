@@ -1,8 +1,18 @@
 package connect4.messages
 
+import connect4.game.Player
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+
+enum class AIChoice {
+    Simple,
+    Medium,
+    Hard,
+    MonteCarlo,
+    Length,
+    Neural
+}
 
 @Serializable
 sealed class Connect4Message {
@@ -13,7 +23,25 @@ sealed class Connect4Message {
 data class ConnectedMessage(val sessionId: Int) : Connect4Message()
 
 @Serializable
-data class NextMoveMessage(val player: Int, val column: Int) : Connect4Message()
+data class PickedAIMessage(val ai: AIChoice) : Connect4Message()
+
+@Serializable
+data class PickedPlayerMessage(val player: Player) : Connect4Message()
+
+@Serializable
+data class GameStartedMessage(val player: Player) : Connect4Message()
+
+@Serializable
+data class GameFinishedMessage(val player: Player?) : Connect4Message()
+
+@Serializable
+data class NextMoveMessage(val column: Int) : Connect4Message()
+
+@Serializable
+object WaitMessage : Connect4Message()
+
+@Serializable
+object ContinueMessage : Connect4Message()
 
 object Connect4Messages {
     private val json: Json = Json {

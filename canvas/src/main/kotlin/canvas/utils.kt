@@ -1,5 +1,6 @@
 package canvas
 
+import csstype.Color
 import csstype.NamedColor
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
@@ -65,9 +66,9 @@ fun CanvasRenderingContext2D.drawRectangle(x: Int, y: Int, sizeX: Int, sizeY: In
     )
 }
 
-fun CanvasRenderingContext2D.drawCircle(x: Double, y: Double, radius: Double, color: String? = null) {
+fun CanvasRenderingContext2D.drawCircle(x: Double, y: Double, radius: Double, color: Color? = null) {
     color?.let {
-        fillStyle = it
+        strokeStyle = it
     }
     beginPath()
     arc(x, y, radius / 2.0, 0.0, 2 * PI)

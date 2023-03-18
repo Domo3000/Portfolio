@@ -18,11 +18,15 @@ dependencies {
     implementation(project(":shared"))
     implementation(project(":shared-connect4"))
 
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.20")
+
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-websockets:$ktorVersion")
     implementation("io.ktor:ktor-server-html-builder:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+
+    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-api:0.4.0")
 
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.388")
     implementation("ch.qos.logback:logback-classic:1.2.11") // TODO 1.4.1
@@ -35,21 +39,32 @@ dependencies {
 tasks.withType<ShadowJar> {
     archiveBaseName.set("portfolio")
     archiveClassifier.set("")
-    archiveVersion.set("")
+    archiveVersion.set("v1")
 
     val debug = System.getenv("DEBUG")
+    val projects = mutableListOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle", "canvas:labyrinth")
     val environment = if(debug == "true") {
+        projects.add("connect4:debug")
         "Development"
     } else {
+        projects.add("connect4:prod")
         "Production"
     }
 
-    for(element in listOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle")) {
-        dependsOn(":$element:browser${environment}Webpack")
-        val js = tasks.getByPath(":$element:browser${environment}Webpack") as KotlinWebpack
+    for(project in projects) {
+        dependsOn(":$project:browser${environment}Webpack")
+        val js = tasks.getByPath(":$project:browser${environment}Webpack") as KotlinWebpack
         into("assets") { from(File(js.destinationDirectory, js.outputFileName)) }
     }
-    minimize()
+
+    manifest {
+        //attributes(Pair("Main-Class", "ApplicationKt"))
+        attributes(Pair("Implementation-Version", "1.15"))
+    }
+
+    minimize {
+        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
+    }
 }
 
 tasks.getByName<JavaExec>("run") {
