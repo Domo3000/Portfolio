@@ -35,12 +35,25 @@ fun List<List<Player?>>.normalize(player: Player): List<List<Player?>> = map {
     }
 }
 
+// TODO find a smoother way to do this
+fun List<Move>.pad(): List<Move> {
+    return if(size > 8) {
+        val last8 = takeLast(8)
+        val last4 = takeLast(4)
+        val last2 = takeLast(2)
+        val last = last()
+        this + last8 + last4 + last2 + last
+    } else {
+        this
+    }
+}
+
 fun List<Move>.toDataset(player: Player): Dataset = OnHeapDataset.create(
-    this.map { move ->
+    pad().map { move ->
         move.field.toFloatArray(player)
     }.toTypedArray(),
     run {
-        val x = map { move ->
+        val x = pad().map { move ->
             move.move.toFloat()
         }
 

@@ -3,7 +3,6 @@ package connect4
 import connect4.ai.AIs
 import connect4.ai.length.PlyLengthAI
 import connect4.ai.monte.BalancedMonteCarloAI
-import connect4.ai.monte.MonteCarloAI
 import connect4.ai.neural.EvolutionHandler
 import connect4.game.Connect4Game
 import kotlinx.coroutines.sync.Mutex
@@ -20,6 +19,12 @@ object Connect4GameHandler {
     val monteCarloAI = { BalancedMonteCarloAI(1001) }
     val lengthAI = { PlyLengthAI() }
 
+    suspend fun currentScore() {
+        mutex.withLock {
+            evolutionHandler.currentScore()
+        }
+    }
+
     suspend fun battleMedium() {
         mutex.withLock {
             evolutionHandler.battle(mediumAIs)
@@ -32,6 +37,7 @@ object Connect4GameHandler {
         }
     }
 
+    // TODO battle all Neurals, not just leastPlayed
     suspend fun battle() {
         mutex.withLock {
             evolutionHandler.battle(mediumAIs + hardAIs)

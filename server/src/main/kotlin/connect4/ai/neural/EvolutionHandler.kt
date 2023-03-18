@@ -6,7 +6,6 @@ import connect4.ai.length.BalancedLengthAI
 import connect4.ai.length.PlyLengthAI
 import connect4.ai.length.SimpleLengthAI
 import connect4.ai.monte.BalancedMonteCarloAI
-import connect4.ai.simple.BiasedRandomAI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import org.jetbrains.kotlinx.dl.api.core.Sequential
@@ -96,6 +95,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
         }.flatten()
     }
 
+    // TODO store lots of trainingMoves so I don't have to run them again
     fun train(neurals: List<NeuralCounter> = emptyList()) {
         val players = AIs.highAIs.map { it() } + highestRanking(1).map { it.ai } + strongest?.ai
 
@@ -139,10 +139,10 @@ class EvolutionHandler(maxChildren: Int = 10) {
             var wins = 0
 
             listOf(
-                BiasedRandomAI(),
+                SimpleLengthAI(),
                 PlyLengthAI(),
-                BalancedMonteCarloAI(500),
-                BalancedMonteCarloAI(1000)
+                BalancedMonteCarloAI(350),
+                BalancedMonteCarloAI(700)
             ).map { opponent ->
                 val currentWins = counter.gamesWon
                 val currentGames = counter.gamesPlayed
@@ -236,14 +236,17 @@ class EvolutionHandler(maxChildren: Int = 10) {
         }
     }
 
+    // TODO method to purge weakest from list of neurals
+
+    // TODO remove print or use currentScore
     fun resetBattles(printAll: Boolean = false, printHighest: Boolean = true) {
         println("reset")
-        if(printAll) {
+        if (printAll) {
             neurals.forEach {
                 println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
             }
         }
-        if(printHighest) {
+        if (printHighest) {
             println("Highest:")
             neurals.maxBy { it.gamesWon }.let {
                 println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
@@ -252,6 +255,17 @@ class EvolutionHandler(maxChildren: Int = 10) {
         neurals.forEach {
             it.gamesWon = 0
             it.gamesPlayed = 0
+        }
+    }
+
+    fun currentScore() {
+        println("Score")
+        neurals.forEach {
+            println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
+        }
+        println("Highest:")
+        neurals.maxBy { it.gamesWon }.let {
+            println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
         }
     }
 
@@ -323,6 +337,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
         val moves = getTrainingMoves(trainingPlayers.map { it() })
         val random = Random(0)
 
+        // TODO disable on PROD
         val test = RandomNeuralAI(
             training = moves,
             conv = emptyList(),

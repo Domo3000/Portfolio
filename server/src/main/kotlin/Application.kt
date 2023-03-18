@@ -19,14 +19,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.css.CssBuilder
-import kotlinx.css.body
 import kotlinx.html.HTML
 import org.slf4j.LoggerFactory
 import utils.logError
 import utils.logInfo
 import java.io.File
 import java.security.KeyStore
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -91,24 +89,28 @@ private fun Application.body(debug: Boolean) {
             with(environment) {
                 if (debug) {
                     launch(Dispatchers.IO) {
-                        var counter = 1
+                        var counter = 0
 
-                        repeat(9) {
+                        repeat(50) {
+                            println(it)
                             battleMedium()
                             battleHard()
                         }
+                        currentScore()
 
                         while (true) {
                             cleanUp(System.currentTimeMillis())
                             // TODO improve training and evaluation
                             try {
                                 if (counter++ % 50 == 0) {
-                                    logInfo("evolve")
+                                    logInfo("bigBattle")
                                     repeat(20) {
                                         battleMedium()
                                         battleHard()
                                     }
-                                    evolve()
+                                    currentScore()
+                                    //logInfo("evolve")
+                                    //evolve()
                                 } else if (counter % 25 == 0) {
                                     logInfo("evaluate")
                                     storeHighest()
@@ -122,7 +124,7 @@ private fun Application.body(debug: Boolean) {
                                     repeat(20) {
                                         battleHard()
                                     }
-                                }  else {
+                                } else {
                                     logInfo("Train")
                                     trainAll()
                                 }
@@ -133,13 +135,16 @@ private fun Application.body(debug: Boolean) {
                             delay(5.seconds)
                         }
                     }
-                } else {
+                }
+                /*
+                else {
                     launch(Dispatchers.IO) {
                         while(true) {
                             cleanUp(System.currentTimeMillis())
                         }
                     }
                 }
+                 */
                 install(StatusPages) {
                     exception<Throwable> { call, cause ->
                         logError(cause)

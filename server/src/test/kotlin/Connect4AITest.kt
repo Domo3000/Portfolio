@@ -64,10 +64,30 @@ class Connect4AITest {
     @Test
     fun lengthAITest() {
         val x = measureTime {
-            battle(1, listOf(BalancedMonteCarloAI(1001), MaximizeWinsMonteCarloAI(1000), MinimizeLossesMonteCarloAI(999), SimpleLengthAI(), PlyLengthAI()), true)
+            battle(
+                1,
+                listOf(
+                    BalancedMonteCarloAI(1001),
+                    MaximizeWinsMonteCarloAI(1000),
+                    MinimizeLossesMonteCarloAI(999),
+                    SimpleLengthAI(),
+                    PlyLengthAI()
+                ),
+                true
+            )
         }
         println(x)
-        battle(10, listOf(BalancedMonteCarloAI(1001), MaximizeWinsMonteCarloAI(1000), MinimizeLossesMonteCarloAI(999), SimpleLengthAI(), PlyLengthAI()), true)
+        battle(
+            10,
+            listOf(
+                BalancedMonteCarloAI(1001),
+                MaximizeWinsMonteCarloAI(1000),
+                MinimizeLossesMonteCarloAI(999),
+                SimpleLengthAI(),
+                PlyLengthAI()
+            ),
+            true
+        )
         //battle(20, listOf(BiasedRandomAI(), BalancedMonteCarloAI(501), MaximizeWinsMonteCarloAI(500), MinimizeLossesMonteCarloAI(499), SimpleLengthAI(), PlyLengthAI(), BalancedLengthAI(), DumbLengthAI()), true)
         //battle(20, listOf(BiasedRandomAI(), MonteCarloAI(10), MonteCarloAI(50), MonteCarloAI(100), MonteCarloAI(200), MonteCarloAI(500), SimpleLengthAI(), PlyLengthAI(), BalancedLengthAI(), DumbLengthAI()))
     }
@@ -207,109 +227,109 @@ class Connect4AITest {
         var maxCorrect = 4
 
         //repeat(100) {
-            handler.allNeurals().forEach { counter ->
-                var correct = 0
-                val game = Connect4Game()
-                val ai = counter.ai
+        handler.allNeurals().forEach { counter ->
+            var correct = 0
+            val game = Connect4Game()
+            val ai = counter.ai
 
-                if (ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer).first().first == 3) {
-                    correct++
-                }
-
-                game.makeMove(4)
-                game.makeMove(5)
-                game.makeMove(4)
-                game.makeMove(5)
-                game.makeMove(4)
-
-                if (ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer).first().first == 4) {
-                    correct += 2
-                }
-
-                game.makeMove(4)
-                game.makeMove(2)
-                game.makeMove(2)
-                game.makeMove(2)
-                game.makeMove(2)
-                game.makeMove(1)
-                game.makeMove(1)
-                game.makeMove(1)
-                game.makeMove(1)
-
-                val move0 = ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
-                    .first().first
-
-                if (move0 == 3 || move0 == 0) {
-                    correct++
-                }
-
-                game.makeMove(2)
-                game.makeMove(2)
-                game.makeMove(1)
-                game.makeMove(1)
-
-                val move1 = ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
-                    .first().first
-
-                if (move1 == 3 || move1 == 0) {
-                    correct++
-                }
-
-                game.makeMove(6)
-                game.makeMove(5)
-                game.makeMove(4)
-                game.makeMove(6)
-                game.makeMove(6)
-                game.makeMove(3)
-                game.makeMove(3)
-                game.makeMove(0)
-                game.makeMove(0)
-                game.makeMove(3)
-                game.makeMove(3)
-                game.makeMove(3)
-
-                if (ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer).first().first == 5
-                ) {
-                    correct += 3
-                }
-
-                val game2 = Connect4Game()
-
-                game2.makeMove(5)
-                game2.makeMove(6)
-                game2.makeMove(5)
-                game2.makeMove(6)
-                game2.makeMove(5)
-
-                val move2 = ai.nextMoveRanked(game2.field, game2.availableColumns, game2.currentPlayer)
-                    .first().first
-
-                if (move2 == 5 || move2 == 6) {
-                    correct++
-                }
-
-                val game3 = Connect4Game()
-
-                game3.makeMove(1)
-                game3.makeMove(1)
-                game3.makeMove(2)
-                game3.makeMove(1)
-                game3.makeMove(3)
-
-                val move3 = ai.nextMoveRanked(game3.field, game3.availableColumns, game3.currentPlayer)
-                    .first().first
-
-                if (move3 == 0 || move3 == 4) {
-                    correct += 2
-                }
-
-                if (correct >= maxCorrect) {
-                    println("newHighest: $correct")
-                    println(counter.ai.info())
-                    maxCorrect = correct
-                    //handler.storeStrongest(ai)
-                }
+            if (ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer).first().first == 3) {
+                correct++
             }
+
+            game.makeMove(4)
+            game.makeMove(5)
+            game.makeMove(4)
+            game.makeMove(5)
+            game.makeMove(4)
+
+            if (ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer).first().first == 4) {
+                correct += 2
+            }
+
+            game.makeMove(4)
+            game.makeMove(2)
+            game.makeMove(2)
+            game.makeMove(2)
+            game.makeMove(2)
+            game.makeMove(1)
+            game.makeMove(1)
+            game.makeMove(1)
+            game.makeMove(1)
+
+            val move0 = ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
+                .first().first
+
+            if (move0 == 3 || move0 == 0) {
+                correct++
+            }
+
+            game.makeMove(2)
+            game.makeMove(2)
+            game.makeMove(1)
+            game.makeMove(1)
+
+            val move1 = ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
+                .first().first
+
+            if (move1 == 3 || move1 == 0) {
+                correct++
+            }
+
+            game.makeMove(6)
+            game.makeMove(5)
+            game.makeMove(4)
+            game.makeMove(6)
+            game.makeMove(6)
+            game.makeMove(3)
+            game.makeMove(3)
+            game.makeMove(0)
+            game.makeMove(0)
+            game.makeMove(3)
+            game.makeMove(3)
+            game.makeMove(3)
+
+            if (ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer).first().first == 5
+            ) {
+                correct += 3
+            }
+
+            val game2 = Connect4Game()
+
+            game2.makeMove(5)
+            game2.makeMove(6)
+            game2.makeMove(5)
+            game2.makeMove(6)
+            game2.makeMove(5)
+
+            val move2 = ai.nextMoveRanked(game2.field, game2.availableColumns, game2.currentPlayer)
+                .first().first
+
+            if (move2 == 5 || move2 == 6) {
+                correct++
+            }
+
+            val game3 = Connect4Game()
+
+            game3.makeMove(1)
+            game3.makeMove(1)
+            game3.makeMove(2)
+            game3.makeMove(1)
+            game3.makeMove(3)
+
+            val move3 = ai.nextMoveRanked(game3.field, game3.availableColumns, game3.currentPlayer)
+                .first().first
+
+            if (move3 == 0 || move3 == 4) {
+                correct += 2
+            }
+
+            if (correct >= maxCorrect) {
+                println("newHighest: $correct")
+                println(counter.ai.info())
+                maxCorrect = correct
+                //handler.storeStrongest(ai)
+            }
+        }
         /*
             repeat(handler.allNeurals().size * 3) {
                 handler.battle()
@@ -399,7 +419,6 @@ class Connect4AITest {
     }
 
     private fun printChallenge(ai: RandomNeuralAI) {
-        var correct = 0
         val game = Connect4Game()
 
         println(game)
@@ -635,9 +654,10 @@ class Connect4AITest {
             repeat(15) { handler.battle(listOf { PlyLengthAI() }, counter) }
             val afterPly = counter.gamesWon
 
-            val score = beforeMedium + ((beforeHigh - beforeMedium) * 2) + ((beforePly - beforeHigh) * 4) + ((afterPly - beforePly) * 8)
+            val score =
+                beforeMedium + ((beforeHigh - beforeMedium) * 2) + ((beforePly - beforeHigh) * 4) + ((afterPly - beforePly) * 8)
 
-            if(score >= maxPoints) {
+            if (score >= maxPoints) {
                 println("new Highscore: $score")
                 println(beforeMedium)
                 println((beforeHigh - beforeMedium))
@@ -645,10 +665,10 @@ class Connect4AITest {
                 println((afterPly - beforePly))
                 println(counter.ai.info())
 
-                    Connect4Game.runGame(counter.ai, BiasedRandomAI(), true, false)
-                    Connect4Game.runGame(BiasedRandomAI(), counter.ai, true, false)
-                    Connect4Game.runGame(counter.ai, PlyLengthAI(), true, false)
-                    Connect4Game.runGame(PlyLengthAI(), counter.ai, true, false)
+                Connect4Game.runGame(counter.ai, BiasedRandomAI(), true, false)
+                Connect4Game.runGame(BiasedRandomAI(), counter.ai, true, false)
+                Connect4Game.runGame(counter.ai, PlyLengthAI(), true, false)
+                Connect4Game.runGame(PlyLengthAI(), counter.ai, true, false)
 
                 maxPoints = score
                 prev2mostPoints = prevmostPoints
@@ -659,9 +679,16 @@ class Connect4AITest {
             }
         }
 
-        listOfNotNull(highest, prevHighest, prev2Highest, mostPoints, prevmostPoints, prev2mostPoints).forEach { counter ->
+        listOfNotNull(
+            highest,
+            prevHighest,
+            prev2Highest,
+            mostPoints,
+            prevmostPoints,
+            prev2mostPoints
+        ).forEach { counter ->
             println(counter.ai.info())
-            handler.storeStrongest(counter.ai)
+            //handler.storeStrongest(counter.ai)
         }
     }
 
