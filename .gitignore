@@ -3,3 +3,4 @@
 build/
 **/build/
 kotlin-js-store/
+/server/neurals/

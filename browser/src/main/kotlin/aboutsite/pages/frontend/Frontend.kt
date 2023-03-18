@@ -37,7 +37,7 @@ val FrontendComponent = FC<Props> {
         p {
             +"To connect other .js files with this React App the "
             a {
-                href = "https://github.com/Domo3000/Portfolio/blob/main/canvas/src/main/kotlin/react/ExternalCanvas.kt"
+                href = "https://github.com/Domo3000/Portfolio/blob/main/canvas/src/main/kotlin/canvas/ExternalCanvas.kt"
                 +"ExternalCanvas"
             }
             +" class sets up EventListeners. The Events get dispatched by "

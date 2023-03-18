@@ -24,7 +24,7 @@ val ProjectComponent = FC<Props> {
             href = "/${AboutSiteMenu.path}/${AboutSiteStates.Frontend.path}"
             +"Frontend"
         }
-        +"gets compiled to Javascript and the Ktor "
+        +" gets compiled to Javascript and the Ktor "
         a {
             href = "/${AboutSiteMenu.path}/${AboutSiteStates.Backend.path}"
             +"Backend"

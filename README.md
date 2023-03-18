@@ -7,7 +7,6 @@ Under construction.
 ## Technology
 
 It's a full-stack application written in `Kotlin`.
-Except [shared.css](shared/src/commonMain/resources/shared.css) everything was written in `Kotlin`.
 
 ### Backend
 
@@ -33,7 +32,7 @@ This is the main module.
 
 This is a small game that uses `ktor-client-websockets`.
 
-[client.kt](connect4/src/main/kotlin/client.kt) waits until it receives a Connect4 Event until renders the game.
+[client.kt](connect4/prod/src/main/kotlin/client.kt) waits until it receives a Connect4 Event until renders the game.
 
 ### Build
 
