@@ -49,6 +49,7 @@ context(Connect4ConnectionHandler)
     }
 }
 
+// TODO why does PROD make illegal moves? check if game per connection
 context(Connect4ConnectionHandler, Connect4GameHandler, ApplicationEnvironment)
 fun Routing.createConnect4Websocket() = webSocket("/connect4") {
     val connection = Connection(this)

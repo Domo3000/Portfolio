@@ -7,12 +7,11 @@ import connect4.ai.neural.EvolutionHandler
 import connect4.game.Connect4Game
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.time.Instant
 
 object Connect4GameHandler {
     private val mutex = Mutex()
 
-    private val evolutionHandler = EvolutionHandler(1)
+    private val evolutionHandler = EvolutionHandler()
     val simpleAIs = AIs.simpleAIs
     val mediumAIs = AIs.mediumAIs
     val hardAIs = AIs.highAIs
@@ -64,8 +63,9 @@ object Connect4GameHandler {
 
     suspend fun storeHighest() {
         mutex.withLock {
+            evolutionHandler.currentScore()
             evolutionHandler.storeHighest(3)
-            evolutionHandler.resetBattles(printAll = true, printHighest = true)
+            evolutionHandler.resetBattles()
         }
     }
 
@@ -76,34 +76,15 @@ object Connect4GameHandler {
     }
 
     suspend fun makeMove(game: Connect4Game): Int = mutex.withLock {
-        evolutionHandler.highestRanking(3)
-            .map { it.ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer) }
+        evolutionHandler.highestRanking(1)
+            .map {
+                it.ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
+            }
             .fold(Array(7) { 0.0f }) { acc, list ->
                 list.forEach {
                     acc[it.first] += it.second
                 }
                 acc
             }.mapIndexed { i, r -> i to r}.maxBy { it.second }.first
-    }
-
-    init {
-        /*
-        println("Starting first battles at ${Instant.now()}")
-        repeat(20) {
-            evolutionHandler.battle(AIs.highAIs + AIs.mediumAIs)
-        }
-        repeat(10) {
-            println("Starting $it training at ${Instant.now()}")
-            evolutionHandler.train(evolutionHandler.allNeurals())
-        }
-         */
-        /*
-        println("Starting first battles at ${Instant.now()}")
-        repeat(evolutionHandler.allNeurals().size * 5) {
-            evolutionHandler.battle(AIs.highAIs + AIs.mediumAIs)
-        }
-
-         */
-        println("GameHandler started at ${Instant.now()}")
     }
 }

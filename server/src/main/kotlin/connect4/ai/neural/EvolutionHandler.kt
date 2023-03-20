@@ -6,9 +6,10 @@ import connect4.ai.length.BalancedLengthAI
 import connect4.ai.length.PlyLengthAI
 import connect4.ai.length.SimpleLengthAI
 import connect4.ai.monte.BalancedMonteCarloAI
+import connect4.ai.monte.MaximizeWinsMonteCarloAI
+import connect4.ai.monte.MinimizeLossesMonteCarloAI
 import connect4.game.Connect4Game
 import connect4.game.Player
-import org.jetbrains.kotlinx.dl.api.core.Sequential
 import org.jetbrains.kotlinx.dl.api.core.activation.Activations
 import org.jetbrains.kotlinx.dl.api.core.initializer.Constant
 import org.jetbrains.kotlinx.dl.api.core.initializer.GlorotNormal
@@ -19,22 +20,77 @@ import org.jetbrains.kotlinx.dl.api.core.metric.Metrics
 import java.io.File
 import kotlin.random.Random
 
+// TODO find a smoother/dynamic way to do this
+fun List<Move>.repeatLastMoves(): List<Move> {
+    return if (size > 8) {
+        val last8 = takeLast(8)
+        val last4 = takeLast(4)
+        val last2 = takeLast(2)
+        val last = last()
+        this + last8 + last4 + last2 + last
+    } else {
+        this
+    }
+}
+
+fun getTrainingMoves(players: List<AI>): List<Move> {
+    val winningMoves = players.map { p1 ->
+        players.mapNotNull { p2 ->
+            val result = Connect4Game.runGame(p1, p2)
+            if (result.first != null) {
+                result.second to result.first
+            } else {
+                null
+            }
+        }
+    }.flatten()
+
+    return winningMoves.map { (moves, player) ->
+        val game = Connect4Game()
+
+        moves.map { m ->
+            val move = Move(game.field.map { it.toList() }, m)
+
+            val allMoves = game.availableColumns.map { column ->
+                val maybeWinningGame = Connect4Game(game.field, game.currentPlayer)
+                maybeWinningGame.makeMove(column)
+                if (maybeWinningGame.hasFinished()) {
+                    Move(game.field.map { it.toList() }, column)
+                } else {
+                    null
+                }
+            } + if (game.currentPlayer == player) {
+                move
+            } else {
+                null
+            }
+
+            game.makeMove(m)
+
+            allMoves.filterNotNull()
+        }.flatten().repeatLastMoves()
+    }.flatten()
+}
+
 class NeuralCounter(
     val ai: RandomNeuralAI,
+    val epochs: Int = 500,
     var trained: Int = 0,
     var gamesPlayed: Int = 0,
     var gamesWon: Int = 0
 )
 
-class EvolutionHandler(maxChildren: Int = 10) {
+class EvolutionHandler {
     private val neurals = mutableListOf<NeuralCounter>()
 
     private val trainingPlayers = listOf(
         { SimpleLengthAI() },
         { BalancedLengthAI() },
         { PlyLengthAI() },
-        { BalancedMonteCarloAI(500) },
-        { BalancedMonteCarloAI(700) }
+        { PlyLengthAI() },
+        { MaximizeWinsMonteCarloAI(500) },
+        { MinimizeLossesMonteCarloAI(500) },
+        { BalancedMonteCarloAI(500) }
     )
 
     var strongest: NeuralCounter? = null
@@ -56,58 +112,18 @@ class EvolutionHandler(maxChildren: Int = 10) {
             }
         )
 
-    private fun getTrainingMoves(players: List<AI>): List<Move> {
-        val winningMoves = players.map { p1 ->
-            players.mapNotNull { p2 ->
-                val result = Connect4Game.runGame(p1, p2)
-                if (result.first != null) {
-                    result.second to result.first
-                } else {
-                    null
-                }
-            }
-        }.flatten()
-
-        return winningMoves.map { (g, p) ->
-            val game = Connect4Game()
-
-            g.map { m ->
-                val move = Move(game.field.map { it.toList() }, m)
-
-                val allMoves = game.availableColumns.map { column ->
-                    val maybeWinningGame = Connect4Game(game.field, game.currentPlayer)
-                    maybeWinningGame.makeMove(column)
-                    if (maybeWinningGame.hasFinished()) {
-                        Move(game.field.map { it.toList() }, column)
-                    } else {
-                        null
-                    }
-                } + if (game.currentPlayer == p) {
-                    move
-                } else {
-                    null
-                }
-
-                game.makeMove(m)
-
-                allMoves.filterNotNull()
-            }.flatten()
-        }.flatten()
-    }
-
-    // TODO store lots of trainingMoves so I don't have to run them again
-    fun train(neurals: List<NeuralCounter> = emptyList()) {
-        val players = AIs.highAIs.map { it() } + highestRanking(1).map { it.ai } + strongest?.ai
-
-        val moves = getTrainingMoves(players.filterNotNull())
+    fun train(neurals: List<NeuralCounter> = emptyList(), trainingMoves: List<Move> = emptyList()) {
+        val moves = trainingMoves.ifEmpty {
+            getTrainingMoves(trainingPlayers.map { it() })
+        }
 
         if (neurals.isEmpty()) {
             val counter = leastTrained()
-            counter.ai.train(moves)
+            counter.ai.train(moves, counter.epochs)
             counter.trained++
         } else {
             neurals.forEach { counter ->
-                counter.ai.train(moves)
+                counter.ai.train(moves, counter.epochs)
                 counter.trained++
             }
         }
@@ -141,8 +157,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
             listOf(
                 SimpleLengthAI(),
                 PlyLengthAI(),
-                BalancedMonteCarloAI(350),
-                BalancedMonteCarloAI(700)
+                BalancedMonteCarloAI(350)
             ).map { opponent ->
                 val currentWins = counter.gamesWon
                 val currentGames = counter.gamesPlayed
@@ -214,58 +229,53 @@ class EvolutionHandler(maxChildren: Int = 10) {
         }
     }
 
+    fun purge(keep: Int = 10) {
+        val toKeep: List<NeuralCounter> = highestRanking(keep)
+        neurals.clear()
+        neurals += toKeep
+    }
+
     fun evolve() {
         val highest: List<NeuralCounter> = (highestRanking(5) + strongest).filterNotNull()
-        val evolved: List<RandomNeuralAI> =
-            (listOf(strongest) + highestRanking(2)).asSequence().filterNotNull()
-                .map { it.ai }.take(2).zipWithNext { a, b ->
+        val evolved: List<NeuralCounter> =
+            (listOf(strongest) + highestRanking(3)).asSequence().filterNotNull()
+                .map { it.ai to it.epochs }.take(3).zipWithNext { a, b ->
                     evolve(
-                        a,
-                        b
-                    )
-                }.flatten().toList()
+                        a.first,
+                        b.first
+                    ) to a.second
+                }.map { (l, c) -> l.map { NeuralCounter(it, epochs = c) } }.flatten().toList()
 
         neurals.clear()
         highest.forEach { counter ->
             println("${counter.gamesWon} : ${counter.ai.name}")
-            neurals += NeuralCounter(counter.ai)
+            neurals += NeuralCounter(counter.ai, epochs = counter.epochs)
         }
         evolved.forEach { e ->
-            println("New evolution: ${e.info()}")
-            neurals += NeuralCounter(e)
+            println("New evolution: ${e.ai.info()}")
+            neurals += e
         }
     }
 
-    // TODO method to purge weakest from list of neurals
-
-    // TODO remove print or use currentScore
-    fun resetBattles(printAll: Boolean = false, printHighest: Boolean = true) {
-        println("reset")
-        if (printAll) {
-            neurals.forEach {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
-            }
-        }
-        if (printHighest) {
-            println("Highest:")
-            neurals.maxBy { it.gamesWon }.let {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
-            }
-        }
+    fun resetBattles() {
         neurals.forEach {
             it.gamesWon = 0
             it.gamesPlayed = 0
         }
     }
 
-    fun currentScore() {
-        println("Score")
-        neurals.forEach {
-            println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
+    fun currentScore(printAll: Boolean = true, printHighest: Boolean = true) {
+        if (printAll) {
+            println("Score")
+            neurals.forEach {
+                println("${it.gamesWon}/${it.gamesPlayed}: ${it.epochs}/${it.ai.info()}")
+            }
         }
-        println("Highest:")
-        neurals.maxBy { it.gamesWon }.let {
-            println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
+        if (printHighest) {
+            println("Highest:")
+            neurals.maxBy { it.gamesWon }.let {
+                println("${it.gamesWon}/${it.gamesPlayed}: ${it.epochs}/${it.ai.info()}")
+            }
         }
     }
 
@@ -275,41 +285,30 @@ class EvolutionHandler(maxChildren: Int = 10) {
             baseDirectory.mkdir()
         }
         highestRanking(highest).forEachIndexed { index, counter ->
-            val directory = File("$baseDirectory/$index")
             println("highest directory: $index = ${counter.ai.info()}")
-            if (!directory.isDirectory) {
-                directory.mkdir()
-            }
-            counter.ai.store(directory)
+            counter.ai.store("$baseDirectory/$index")
         }
     }
 
-    var c = 1
-
+    // TODO automatically detect highest folder number
+    var c = 84
     fun storeStrongest(ai: RandomNeuralAI) {
         val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
         if (!baseDirectory.isDirectory) {
             baseDirectory.mkdir()
         }
         c++
-        println("directory: $c")
-        val directory = File("$baseDirectory/$c")
-        if (!directory.isDirectory) {
-            directory.mkdir()
-        }
-        ai.store(directory)
+        println("directory: $c = ${ai.info()}")
+        ai.store("$baseDirectory/$c")
     }
 
-    fun loadStrongest(wins: Int): NeuralCounter {
+    private fun loadStrongest(wins: Int): NeuralCounter {
         val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
         if (!baseDirectory.isDirectory) {
             baseDirectory.mkdir()
         }
         val directory = File("$baseDirectory/$c")
-        val file = File(directory.path + "/modelConfig.json")
-
-        val stored = Sequential.loadModelConfiguration(file)
-        val loaded = RandomNeuralAI.fromStorage(stored)
+        val loaded = RandomNeuralAI.fromStorage(directory)
         return NeuralCounter(loaded, gamesWon = wins)
     }
 
@@ -319,10 +318,8 @@ class EvolutionHandler(maxChildren: Int = 10) {
         if (directory.isDirectory) {
             directory.walk().forEach { neuralDirectory ->
                 if (neuralDirectory != directory && neuralDirectory.isDirectory) {
-                    val file = File(neuralDirectory.path + "/modelConfig.json")
                     try {
-                        val stored = Sequential.loadModelConfiguration(file)
-                        val loaded = RandomNeuralAI.fromStorage(stored)
+                        val loaded = RandomNeuralAI.fromStorage(neuralDirectory)
                         println("${neuralDirectory.path}: ${loaded.name}")
                         neurals += NeuralCounter(loaded)
                     } catch (e: Exception) {
@@ -333,16 +330,30 @@ class EvolutionHandler(maxChildren: Int = 10) {
         }
     }
 
-    init {
-        val moves = getTrainingMoves(trainingPlayers.map { it() })
+    fun initWithBasicNeurals(trainingMoves: List<Move> = emptyList()) {
+        val moves = trainingMoves.ifEmpty {
+            getTrainingMoves(trainingPlayers.map { it() })
+        }
         val random = Random(0)
 
-        // TODO disable on PROD
         val test = RandomNeuralAI(
             training = moves,
             conv = emptyList(),
             dense = emptyList(),
-            output = NeuralAIFactory.dense(8, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+            metrics = Metrics.ACCURACY
+        )
+
+        val test1 = RandomNeuralAI(
+            training = moves,
+            conv = listOf(
+                NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+            ),
+            dense = listOf(
+                NeuralAIFactory.dense(28, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            ),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
             losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
             metrics = Metrics.ACCURACY
         )
@@ -353,7 +364,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
                 NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
             ),
             dense = emptyList(),
-            output = NeuralAIFactory.dense(8, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
             losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
             metrics = Metrics.ACCURACY
         )
@@ -366,7 +377,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
             dense = listOf(
                 NeuralAIFactory.dense(80, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
             ),
-            output = NeuralAIFactory.dense(8, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
             losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
             metrics = Metrics.ACCURACY
         )
@@ -379,7 +390,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
             dense = listOf(
                 NeuralAIFactory.dense(20, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
             ),
-            output = NeuralAIFactory.dense(8, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
             losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
             metrics = Metrics.ACCURACY
         )
@@ -392,7 +403,7 @@ class EvolutionHandler(maxChildren: Int = 10) {
             dense = listOf(
                 NeuralAIFactory.dense(74, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
             ),
-            output = NeuralAIFactory.dense(8, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
             losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
             metrics = Metrics.ACCURACY
         )
@@ -405,33 +416,49 @@ class EvolutionHandler(maxChildren: Int = 10) {
             dense = listOf(
                 NeuralAIFactory.dense(120, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
             ),
-            output = NeuralAIFactory.dense(8, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
+            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
             losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
             metrics = Metrics.ACCURACY
         )
 
-        neurals.addAll(
-            listOf(
-                test,
-                test2,
-                test3,
-                test4,
-                test5,
-                test6
-            ).map { NeuralCounter(it) }
-        )
+        listOf(10, 50, 100, 500).forEach { epochs ->
+            neurals.addAll(
+                listOf(
+                    test,
+                    test1,
+                    test2,
+                    test3,
+                    test4,
+                    test5,
+                    test6
+                ).map { NeuralCounter(it, epochs = epochs) }
+            )
+        }
+    }
 
-        loadStored()
-
-        while (neurals.size < maxChildren) {
-            try {
-                neurals += NeuralCounter(RandomNeuralAI(moves))
-            } catch (_: Exception) {
-            }
+    fun initWithRandom(amount: Int, trainingMoves: List<Move> = emptyList()) {
+        val moves = trainingMoves.ifEmpty {
+            getTrainingMoves(trainingPlayers.map { it() })
         }
 
+        var i = 0
+
+        while (i < amount) {
+            try {
+                val random = NeuralCounter(RandomNeuralAI(moves))
+                neurals += random
+                println("generated randomly: ${random.ai.info()}")
+                i++
+            } catch (_: Exception) { }
+        }
+    }
+
+    init {
+        loadStored()
+
+        println("Loaded from Storage:")
         neurals.forEach {
-            println("${it.trained}: ${it.ai.info()}")
+            println(it.ai.info())
         }
     }
 }

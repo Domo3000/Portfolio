@@ -16,13 +16,11 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.css.CssBuilder
 import kotlinx.html.HTML
 import org.slf4j.LoggerFactory
 import utils.logError
-import utils.logInfo
 import java.io.File
 import java.security.KeyStore
 import kotlin.time.Duration.Companion.seconds
@@ -89,62 +87,12 @@ private fun Application.body(debug: Boolean) {
             with(environment) {
                 if (debug) {
                     launch(Dispatchers.IO) {
-                        var counter = 0
-
-                        repeat(50) {
-                            println(it)
-                            battleMedium()
-                            battleHard()
-                        }
-                        currentScore()
-
                         while (true) {
-                            cleanUp(System.currentTimeMillis())
-                            // TODO improve training and evaluation
-                            try {
-                                if (counter++ % 50 == 0) {
-                                    logInfo("bigBattle")
-                                    repeat(20) {
-                                        battleMedium()
-                                        battleHard()
-                                    }
-                                    currentScore()
-                                    //logInfo("evolve")
-                                    //evolve()
-                                } else if (counter % 25 == 0) {
-                                    logInfo("evaluate")
-                                    storeHighest()
-                                    evaluate()
-                                } else if (counter % 5 == 0) {
-                                    logInfo("BattleMedium")
-                                    repeat(10) {
-                                        battleMedium()
-                                    }
-                                    logInfo("BattleHard")
-                                    repeat(20) {
-                                        battleHard()
-                                    }
-                                } else {
-                                    logInfo("Train")
-                                    trainAll()
-                                }
-                            } catch (e: Exception) {
-                                logError(e)
-                            }
-
-                            delay(5.seconds)
-                        }
-                    }
-                }
-                /*
-                else {
-                    launch(Dispatchers.IO) {
-                        while(true) {
+                            // TODO test this in more detail
                             cleanUp(System.currentTimeMillis())
                         }
                     }
                 }
-                 */
                 install(StatusPages) {
                     exception<Throwable> { call, cause ->
                         logError(cause)
