@@ -103,6 +103,8 @@ class EvolutionHandler {
     private fun leastPlayed(): NeuralCounter =
         neurals.minBy { it.gamesPlayed }
 
+    fun any(): NeuralCounter = neurals.random()
+
     fun highestRanking(amount: Int): List<NeuralCounter> =
         neurals.sortedByDescending { it.gamesWon }.subList(
             0, if (amount < neurals.size) {
@@ -229,7 +231,7 @@ class EvolutionHandler {
         }
     }
 
-    fun purge(keep: Int = 10) {
+    fun purge(keep: Int = 30) {
         val toKeep: List<NeuralCounter> = highestRanking(keep)
         neurals.clear()
         neurals += toKeep
@@ -290,8 +292,9 @@ class EvolutionHandler {
         }
     }
 
+    // TODO remove storeStrongest/loadStrongest
     // TODO automatically detect highest folder number
-    var c = 84
+    var c = 111
     fun storeStrongest(ai: RandomNeuralAI) {
         val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
         if (!baseDirectory.isDirectory) {
@@ -300,6 +303,20 @@ class EvolutionHandler {
         c++
         println("directory: $c = ${ai.info()}")
         ai.store("$baseDirectory/$c")
+    }
+
+    fun storeStrongest() {
+        val highest = highestRanking(1).first()
+        val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
+        if (!baseDirectory.isDirectory) {
+            baseDirectory.mkdir()
+        }
+        c++
+        val wins = highest.gamesWon
+        println("strongest: s$c = ${highest.ai.info()}")
+        highest.ai.store("$baseDirectory/s$c")
+        strongest = loadStrongest(wins)
+        println("New Strongest: $wins: ${strongest!!.ai.info()}")
     }
 
     private fun loadStrongest(wins: Int): NeuralCounter {

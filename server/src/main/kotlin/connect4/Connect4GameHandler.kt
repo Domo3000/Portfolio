@@ -36,7 +36,7 @@ object Connect4GameHandler {
         }
     }
 
-    // TODO battle all Neurals, not just leastPlayed
+    // TODO method to battle all Neurals, not just leastPlayed
     suspend fun battle() {
         mutex.withLock {
             evolutionHandler.battle(mediumAIs + hardAIs)
@@ -76,15 +76,22 @@ object Connect4GameHandler {
     }
 
     suspend fun makeMove(game: Connect4Game): Int = mutex.withLock {
-        evolutionHandler.highestRanking(1)
-            .map {
-                it.ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
-            }
-            .fold(Array(7) { 0.0f }) { acc, list ->
-                list.forEach {
-                    acc[it.first] += it.second
-                }
-                acc
-            }.mapIndexed { i, r -> i to r}.maxBy { it.second }.first
+        evolutionHandler.any().ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
+            .maxBy { it.second }.first
     }
+    /*
+    suspend fun makeMove(game: Connect4Game): Int = mutex.withLock {
+            evolutionHandler.highestRanking(3)
+                .map {
+                    it.ai.nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
+                }
+                .fold(Array(7) { 0.0f }) { acc, list ->
+                    list.forEach {
+                        acc[it.first] += it.second
+                    }
+                    acc
+                }.mapIndexed { i, r -> i to r }.maxBy { it.second }.first
+        }
+    }
+    */
 }
