@@ -114,9 +114,13 @@ class BalancedMonteCarloAI(max: Int): MonteCarloAI(max) {
 }
 
 class MaximizeWinsMonteCarloAI(max: Int): MonteCarloAI(max) {
+    override val name = "MaximizeWinsMonteCarloAI($max)"
+
     override fun decision(results: List<Pair<Int, Counter>>): Int = results.maxBy { it.second.wins.toDouble() }.first
 }
 
 class MinimizeLossesMonteCarloAI(max: Int): MonteCarloAI(max) {
+    override val name = "MinimizeLossesMonteCarloAI($max)"
+
     override fun decision(results: List<Pair<Int, Counter>>): Int = results.minBy { it.second.losses.toDouble() }.first
 }

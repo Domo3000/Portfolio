@@ -13,21 +13,17 @@ import connect4.game.Player
 import org.jetbrains.kotlinx.dl.api.core.activation.Activations
 import org.jetbrains.kotlinx.dl.api.core.initializer.Constant
 import org.jetbrains.kotlinx.dl.api.core.initializer.GlorotNormal
+import org.jetbrains.kotlinx.dl.api.core.initializer.RandomNormal
 import org.jetbrains.kotlinx.dl.api.core.initializer.Zeros
 import org.jetbrains.kotlinx.dl.api.core.layer.convolutional.ConvPadding
 import org.jetbrains.kotlinx.dl.api.core.loss.Losses
 import org.jetbrains.kotlinx.dl.api.core.metric.Metrics
-import java.io.File
+import java.time.Instant
 import kotlin.random.Random
 
-// TODO find a smoother/dynamic way to do this
 fun List<Move>.repeatLastMoves(): List<Move> {
-    return if (size > 8) {
-        val last8 = takeLast(8)
-        val last4 = takeLast(4)
-        val last2 = takeLast(2)
-        val last = last()
-        this + last8 + last4 + last2 + last
+    return if(size >= 2) {
+        this + takeLast(size / 2).repeatLastMoves()
     } else {
         this
     }
@@ -36,6 +32,8 @@ fun List<Move>.repeatLastMoves(): List<Move> {
 fun getTrainingMoves(players: List<AI>): List<Move> {
     val winningMoves = players.map { p1 ->
         players.mapNotNull { p2 ->
+            p1.reset()
+            p2.reset()
             val result = Connect4Game.runGame(p1, p2)
             if (result.first != null) {
                 result.second to result.first
@@ -51,7 +49,8 @@ fun getTrainingMoves(players: List<AI>): List<Move> {
         moves.map { m ->
             val move = Move(game.field.map { it.toList() }, m)
 
-            val allMoves = game.availableColumns.map { column ->
+            /*
+            val allWMoves = game.availableColumns.map { column ->
                 val maybeWinningGame = Connect4Game(game.field, game.currentPlayer)
                 maybeWinningGame.makeMove(column)
                 if (maybeWinningGame.hasFinished()) {
@@ -65,16 +64,23 @@ fun getTrainingMoves(players: List<AI>): List<Move> {
                 null
             }
 
+             */
+
+            val playerMoves = if (game.currentPlayer == player) {
+                listOf(move)
+            } else {
+                emptyList()
+            }
+
             game.makeMove(m)
 
-            allMoves.filterNotNull()
+            playerMoves
         }.flatten().repeatLastMoves()
     }.flatten()
 }
 
 class NeuralCounter(
     val ai: RandomNeuralAI,
-    val epochs: Int = 500,
     var trained: Int = 0,
     var gamesPlayed: Int = 0,
     var gamesWon: Int = 0
@@ -93,8 +99,6 @@ class EvolutionHandler {
         { BalancedMonteCarloAI(500) }
     )
 
-    var strongest: NeuralCounter? = null
-
     fun allNeurals(): List<NeuralCounter> = neurals.toList()
 
     private fun leastTrained(): NeuralCounter =
@@ -103,30 +107,25 @@ class EvolutionHandler {
     private fun leastPlayed(): NeuralCounter =
         neurals.minBy { it.gamesPlayed }
 
-    fun any(): NeuralCounter = neurals.random()
-
     fun highestRanking(amount: Int): List<NeuralCounter> =
-        neurals.sortedByDescending { it.gamesWon }.subList(
-            0, if (amount < neurals.size) {
-                amount
-            } else {
-                neurals.size - 1
-            }
-        )
+        neurals.sortedByDescending { it.gamesWon }.take(amount)
 
-    fun train(neurals: List<NeuralCounter> = emptyList(), trainingMoves: List<Move> = emptyList()) {
+    fun train(toTrain: List<NeuralCounter> = emptyList(), trainingMoves: List<Move> = emptyList()) {
         val moves = trainingMoves.ifEmpty {
             getTrainingMoves(trainingPlayers.map { it() })
         }
 
-        if (neurals.isEmpty()) {
+        if (toTrain.isEmpty()) {
             val counter = leastTrained()
-            counter.ai.train(moves, counter.epochs)
+            counter.ai.train(moves)
             counter.trained++
         } else {
-            neurals.forEach { counter ->
-                counter.ai.train(moves, counter.epochs)
-                counter.trained++
+            toTrain.forEach { counter ->
+                if (counter.ai.train(moves)) {
+                    counter.trained++
+                } else {
+                    neurals -= counter
+                }
             }
         }
     }
@@ -149,44 +148,56 @@ class EvolutionHandler {
         }
     }
 
-    fun evaluate(): Boolean {
-        var new = false
-        neurals.forEach { counter ->
-            println("${counter.gamesWon}/${counter.gamesPlayed}: ${counter.ai.info()}")
-
-            var wins = 0
-
-            listOf(
-                SimpleLengthAI(),
-                PlyLengthAI(),
-                BalancedMonteCarloAI(350)
-            ).map { opponent ->
-                val currentWins = counter.gamesWon
-                val currentGames = counter.gamesPlayed
-                repeat(10) { singleBattle(counter, opponent, true) }
-                val newWins = counter.gamesWon
-                wins += newWins - currentWins
-
-                counter.gamesWon = currentWins
-                counter.gamesPlayed = currentGames
-            }
-
-            if (strongest == null || wins >= strongest!!.gamesWon) {
-                storeStrongest(counter.ai)
-                strongest = loadStrongest(wins)
-                println("New Strongest: $wins: ${strongest!!.ai.info()}")
-                new = true
-            }
-        }
-        return new
-    }
-
     fun battle(
         players: List<() -> AI> = AIs.highAIs,
         ai: NeuralCounter = leastPlayed()
     ) {
         players.forEach { opponent ->
             singleBattle(ai, opponent(), true)
+        }
+    }
+
+    fun softEvolve(
+        toEvolve: RandomNeuralAI,
+        training: List<Move> = emptyList()
+    ) {
+        val before = neurals.toList()
+
+        val new = listOf(
+            { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }) },
+            { toEvolve.copy(training, dense = toEvolve.denseLayer.map { it.softRandomize() }) },
+            { toEvolve.copy(training, output = toEvolve.outputLayer.softRandomize()) },
+            { toEvolve.copy(training, dense = null) },
+            {
+                toEvolve.copy(
+                    training,
+                    conv = toEvolve.convLayer.map { it.softRandomize() },
+                    dense = toEvolve.denseLayer.map { it.softRandomize() })
+            },
+            {
+                toEvolve.copy(
+                    training,
+                    conv = toEvolve.convLayer.map { it.softRandomize() },
+                    dense = toEvolve.denseLayer.map { it.softRandomize() },
+                    output = toEvolve.outputLayer.softRandomize())
+            },
+        ).mapNotNull {
+            try {
+                it()
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        new.forEach { evolved ->
+            neurals += NeuralCounter(evolved)
+        }
+
+        val after = neurals.toList()
+
+        println("Created from softEvolve:")
+        after.filterNot { before.contains(it) }.forEach {
+            println(it.ai.info())
         }
     }
 
@@ -197,6 +208,45 @@ class EvolutionHandler {
     ): List<RandomNeuralAI> = listOf(
         { first.copy(training) },
         { first.copy(training, conv = first.convLayer.map { it.randomize() }) },
+        {
+            first.copy(
+                training,
+                conv = listOf(NeuralAIFactory.randomConv2DLayer(), NeuralAIFactory.randomConv2DLayer())
+            )
+        },
+        {
+            first.copy(
+                training,
+                conv = listOf(
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer()
+                )
+            )
+        },
+        {
+            first.copy(
+                training,
+                conv = listOf(
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer()
+                )
+            )
+        },
+        {
+            first.copy(
+                training,
+                conv = listOf(
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer(),
+                    NeuralAIFactory.randomConv2DLayer()
+                )
+            )
+        },
         { first.copy(training, dense = first.denseLayer.map { it.randomize() }) },
         {
             first.copy(
@@ -237,11 +287,12 @@ class EvolutionHandler {
         neurals += toKeep
     }
 
-    fun evolve() {
+    /*
+    fun evolve(take: Int = 3) {
         val highest: List<NeuralCounter> = (highestRanking(5) + strongest).filterNotNull()
         val evolved: List<NeuralCounter> =
             (listOf(strongest) + highestRanking(3)).asSequence().filterNotNull()
-                .map { it.ai to it.epochs }.take(3).zipWithNext { a, b ->
+                .map { it.ai to it.epochs }.take(take).zipWithNext { a, b ->
                     evolve(
                         a.first,
                         b.first
@@ -259,6 +310,8 @@ class EvolutionHandler {
         }
     }
 
+     */
+
     fun resetBattles() {
         neurals.forEach {
             it.gamesWon = 0
@@ -270,190 +323,804 @@ class EvolutionHandler {
         if (printAll) {
             println("Score")
             neurals.forEach {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.epochs}/${it.ai.info()}")
+                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
             }
         }
         if (printHighest) {
             println("Highest:")
             neurals.maxBy { it.gamesWon }.let {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.epochs}/${it.ai.info()}")
-            }
-        }
-    }
-
-    fun storeHighest(highest: Int = 3) {
-        val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
-        if (!baseDirectory.isDirectory) {
-            baseDirectory.mkdir()
-        }
-        highestRanking(highest).forEachIndexed { index, counter ->
-            println("highest directory: $index = ${counter.ai.info()}")
-            counter.ai.store("$baseDirectory/$index")
-        }
-    }
-
-    // TODO remove storeStrongest/loadStrongest
-    // TODO automatically detect highest folder number
-    var c = 111
-    fun storeStrongest(ai: RandomNeuralAI) {
-        val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
-        if (!baseDirectory.isDirectory) {
-            baseDirectory.mkdir()
-        }
-        c++
-        println("directory: $c = ${ai.info()}")
-        ai.store("$baseDirectory/$c")
-    }
-
-    fun storeStrongest() {
-        val highest = highestRanking(1).first()
-        val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
-        if (!baseDirectory.isDirectory) {
-            baseDirectory.mkdir()
-        }
-        c++
-        val wins = highest.gamesWon
-        println("strongest: s$c = ${highest.ai.info()}")
-        highest.ai.store("$baseDirectory/s$c")
-        strongest = loadStrongest(wins)
-        println("New Strongest: $wins: ${strongest!!.ai.info()}")
-    }
-
-    private fun loadStrongest(wins: Int): NeuralCounter {
-        val baseDirectory = File("${System.getProperty("user.dir")}/neurals")
-        if (!baseDirectory.isDirectory) {
-            baseDirectory.mkdir()
-        }
-        val directory = File("$baseDirectory/$c")
-        val loaded = RandomNeuralAI.fromStorage(directory)
-        return NeuralCounter(loaded, gamesWon = wins)
-    }
-
-    private fun loadStored() {
-        val directory = File("${System.getProperty("user.dir")}/neurals")
-
-        if (directory.isDirectory) {
-            directory.walk().forEach { neuralDirectory ->
-                if (neuralDirectory != directory && neuralDirectory.isDirectory) {
-                    try {
-                        val loaded = RandomNeuralAI.fromStorage(neuralDirectory)
-                        println("${neuralDirectory.path}: ${loaded.name}")
-                        neurals += NeuralCounter(loaded)
-                    } catch (e: Exception) {
-                        println(e)
-                    }
-                }
+                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
             }
         }
     }
 
     fun initWithBasicNeurals(trainingMoves: List<Move> = emptyList()) {
+        val before = neurals.toList()
+
         val moves = trainingMoves.ifEmpty {
             getTrainingMoves(trainingPlayers.map { it() })
         }
         val random = Random(0)
 
-        val test = RandomNeuralAI(
-            training = moves,
-            conv = emptyList(),
-            dense = emptyList(),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
+        neurals.addAll(
+            listOf(
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            28,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            Constant(0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            28,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            Constant(0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+                    ),
+                    dense = emptyList(),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+                    ),
+                    dense = emptyList(),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(21, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), RandomNormal(0.0f, 0.2f)),
+                        NeuralAIFactory.conv2D(7, 3, Activations.LiSHT, GlorotNormal(random.nextLong()), RandomNormal(0.0f, 0.2f))
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            21,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            Constant(0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(21, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), RandomNormal(0.0f, 0.2f)),
+                        NeuralAIFactory.conv2D(7, 3, Activations.LiSHT, GlorotNormal(random.nextLong()), RandomNormal(0.0f, 0.2f))
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            21,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            Constant(0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            74,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            Constant(0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            74,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            Constant(0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            32,
+                            4,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            294,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        RandomNormal(0.0f, 0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            32,
+                            4,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            294,
+                            Activations.HardSigmoid,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        RandomNormal(0.0f, 0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                )
+            ).map { NeuralCounter(it) }
         )
 
-        val test1 = RandomNeuralAI(
-            training = moves,
-            conv = listOf(
-                NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
-            ),
-            dense = listOf(
-                NeuralAIFactory.dense(28, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            ),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
+        val after = neurals.toList()
+
+        println("Initialized basic Neurals:")
+        after.filterNot { before.contains(it) }.forEach {
+            println(it.ai.info())
+        }
+    }
+
+    fun initWithComplexNeurals(trainingMoves: List<Move> = emptyList()) {
+        val before = neurals.toList()
+
+        val moves = trainingMoves.ifEmpty {
+            getTrainingMoves(trainingPlayers.map { it() })
+        }
+        val random = Random(0)
+
+        neurals.addAll(
+            listOf(
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    } + (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    } + (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            16,
+                            3,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    } + NeuralAIFactory.conv2D(
+                        3,
+                        1,
+                        Activations.LiSHT,
+                        GlorotNormal(random.nextLong()),
+                        RandomNormal(0.0f, 0.5f)
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(64, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f))
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    } + (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    } + (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            16,
+                            3,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    } + NeuralAIFactory.conv2D(
+                        3,
+                        1,
+                        Activations.LiSHT,
+                        GlorotNormal(random.nextLong()),
+                        RandomNormal(0.0f, 0.5f)
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(64, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f))
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.max2D(
+                            2,
+                            1,
+                            ConvPadding.VALID
+                        ),
+                        NeuralAIFactory.conv2D(
+                            64,
+                            2,
+                            Activations.SoftSign,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.avg2D(
+                            3,
+                            1,
+                            ConvPadding.VALID
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            256,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.dense(
+                            64,
+                            Activations.TanhShrink,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.dense(
+                            28,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.max2D(
+                            2,
+                            1,
+                            ConvPadding.VALID
+                        ),
+                        NeuralAIFactory.conv2D(
+                            64,
+                            2,
+                            Activations.SoftSign,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.avg2D(
+                            3,
+                            1,
+                            ConvPadding.VALID
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            256,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.dense(
+                            64,
+                            Activations.TanhShrink,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.dense(
+                            28,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.max2D(
+                            3,
+                            1,
+                            ConvPadding.VALID
+                        ),
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.SoftSign,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.avg2D(
+                            3,
+                            1,
+                            ConvPadding.VALID
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            20,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.max2D(
+                            3,
+                            1,
+                            ConvPadding.VALID
+                        ),
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.SoftSign,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.avg2D(
+                            3,
+                            1,
+                            ConvPadding.VALID
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            40,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            64,
+                            4,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            64,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            64,
+                            4,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            64,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            16,
+                            2,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            32,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            16,
+                            2,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            32,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.avg2D(
+                            4,
+                            1,
+                            ConvPadding.SAME
+                        ),
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            16,
+                            2,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            32,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = moves,
+                    inputType = true,
+                    conv = listOf(
+                        NeuralAIFactory.avg2D(
+                            4,
+                            1,
+                            ConvPadding.SAME
+                        ),
+                        NeuralAIFactory.conv2D(
+                            32,
+                            3,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            16,
+                            2,
+                            Activations.Tanh,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            32,
+                            Activations.Exponential,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.5f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Relu,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                )
+            ).map { NeuralCounter(it) }
         )
 
-        val test2 = RandomNeuralAI(
-            training = moves,
-            conv = listOf(
-                NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
-            ),
-            dense = emptyList(),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
-        )
+        val after = neurals.toList()
 
-        val test3 = RandomNeuralAI(
-            training = moves,
-            conv = listOf(
-                NeuralAIFactory.max2D(4, 1, ConvPadding.VALID)
-            ),
-            dense = listOf(
-                NeuralAIFactory.dense(80, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            ),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
-        )
-
-        val test4 = RandomNeuralAI(
-            training = moves,
-            conv = listOf(
-                NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
-            ),
-            dense = listOf(
-                NeuralAIFactory.dense(20, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            ),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
-        )
-
-        val test5 = RandomNeuralAI(
-            training = moves,
-            conv = listOf(
-                NeuralAIFactory.conv2D(3, 4, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
-            ),
-            dense = listOf(
-                NeuralAIFactory.dense(74, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            ),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
-        )
-
-        val test6 = RandomNeuralAI(
-            training = moves,
-            conv = listOf(
-                NeuralAIFactory.conv2D(3, 5, Activations.LiSHT, GlorotNormal(random.nextLong()), Zeros())
-            ),
-            dense = listOf(
-                NeuralAIFactory.dense(120, Activations.HardSigmoid, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            ),
-            output = NeuralAIFactory.dense(7, Activations.Linear, GlorotNormal(random.nextLong()), Constant(0.5f)),
-            losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-            metrics = Metrics.ACCURACY
-        )
-
-        listOf(10, 50, 100, 500).forEach { epochs ->
-            neurals.addAll(
-                listOf(
-                    test,
-                    test1,
-                    test2,
-                    test3,
-                    test4,
-                    test5,
-                    test6
-                ).map { NeuralCounter(it, epochs = epochs) }
-            )
+        println("Initialized complex Neurals:")
+        after.filterNot { before.contains(it) }.forEach {
+            println(it.ai.info())
         }
     }
 
     fun initWithRandom(amount: Int, trainingMoves: List<Move> = emptyList()) {
+        val random = Random(Instant.now().toEpochMilli())
+
         val moves = trainingMoves.ifEmpty {
             getTrainingMoves(trainingPlayers.map { it() })
         }
@@ -462,20 +1129,12 @@ class EvolutionHandler {
 
         while (i < amount) {
             try {
-                val random = NeuralCounter(RandomNeuralAI(moves))
-                neurals += random
-                println("generated randomly: ${random.ai.info()}")
+                val new = NeuralCounter(RandomNeuralAI(moves, random.nextBoolean()))
+                neurals += new
+                println("generated randomly: ${new.ai.info()}")
                 i++
-            } catch (_: Exception) { }
-        }
-    }
-
-    init {
-        loadStored()
-
-        println("Loaded from Storage:")
-        neurals.forEach {
-            println(it.ai.info())
+            } catch (_: Exception) {
+            }
         }
     }
 }

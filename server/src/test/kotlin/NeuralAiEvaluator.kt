@@ -1,6 +1,14 @@
+import connect4.ai.AI
+import connect4.ai.length.BalancedLengthAI
+import connect4.ai.length.PlyLengthAI
+import connect4.ai.length.SimpleLengthAI
+import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.neural.EvolutionHandler
-import connect4.ai.neural.RandomNeuralAI
+import connect4.ai.neural.StoredHandler
+import connect4.ai.neural.StoredNeuralAI
+import connect4.ai.neural.getTrainingMoves
 import connect4.game.Connect4Game
+import connect4.game.Player
 import org.junit.Test
 
 data class NeuralAiChallenge(
@@ -14,10 +22,6 @@ data class NeuralAiChallenge(
 }
 
 object NeuralAiChallengeBuilder {
-    // TODO produce games and expected move
-    // eg. empty to 3
-    // vertical line to 0 etc
-    // generator for
     fun empty(): NeuralAiChallenge = NeuralAiChallenge(Connect4Game(), listOf(3))
 
     // A
@@ -45,13 +49,18 @@ object NeuralAiChallengeBuilder {
     // BABABAB
     // ABABABA
     // if height = 3 -> next player is B => 0, 2, 4, 6
-    fun alternatingPilesEverywhere(game: Connect4Game): NeuralAiChallenge {
-        repeat(3) {
+    fun alternatingPilesEverywhere(height: Int, game: Connect4Game): NeuralAiChallenge {
+        repeat(height) {
             (0..6).forEach {
                 game.makeMove(it)
             }
         }
-        return NeuralAiChallenge(game, listOf(0, 2, 4, 6)) // TODO adjustable height and expectedMoves
+        val correct = if(height % 2 == 0) {
+            listOf(0, 2, 4, 6)
+        } else {
+            listOf(1, 3, 5)
+        }
+        return NeuralAiChallenge(game, correct) // TODO adjustable height and expectedMoves
     }
 
     //   B
@@ -105,11 +114,57 @@ object NeuralAiChallengeBuilder {
         }
         return NeuralAiChallenge(game, expected)
     }
+
+    fun completeChallenge(): List<NeuralAiChallenge> {
+        val challenges = listOf(
+            empty(),
+            alternatingPilesEverywhere(2, Connect4Game()),
+            alternatingPilesEverywhere(3, Connect4Game()),
+            alternatingPilesEverywhere(4, Connect4Game()),
+            alternatingPilesEverywhere(5, Connect4Game())
+        ) + (0..5).map {
+            verticalPiles(it, 3, Connect4Game())
+        } + (0..4).map {
+            horizontalT(it, Connect4Game())
+        } + (0..5).map {
+            horizontalL(it, Connect4Game())
+        } + (0..5).map {
+            horizontalFlippedL(it, Connect4Game())
+        }  + (0..4).map {
+            horizontalT(
+                it,
+                alternatingPilesEverywhere(2, Connect4Game()).game
+            )
+        } + (0..4).map {
+            horizontalT(
+                it,
+                alternatingPilesEverywhere(3, Connect4Game()).game
+            )
+        }
+
+        return challenges
+    }
 }
 
-private fun evaluate(ai: RandomNeuralAI, challenge: NeuralAiChallenge): Boolean {
+class FakeAi(private val always: Int) : AI() {
+    override val name: String = "FakeAi($always)"
+
+    override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int =
+        if (availableColumns.contains(always)) {
+            always
+        } else {
+            availableColumns.random()
+        }
+}
+
+fun evaluate(ai: AI, challenge: NeuralAiChallenge, print: Boolean = false): Boolean {
+    ai.reset()
     val game = challenge.game
     val move = ai.nextMove(game.field, game.availableColumns, game.currentPlayer)
+    if(print) {
+        println(game.toString())
+        println(move)
+    }
     return challenge.expectedMove.contains(move)
 }
 
@@ -130,47 +185,58 @@ class NeuralAiEvaluator {
         (0..5).forEach {
             NeuralAiChallengeBuilder.horizontalFlippedL(it, Connect4Game()).print()
         }
-        val pilesEverywhere = NeuralAiChallengeBuilder.alternatingPilesEverywhere(Connect4Game())
+        val pilesEverywhere = NeuralAiChallengeBuilder.alternatingPilesEverywhere(3, Connect4Game())
         pilesEverywhere.print()
         val mixed = NeuralAiChallengeBuilder.horizontalT(2, pilesEverywhere.game)
         mixed.print()
+        pilesEverywhere.print() // TODO game.copy() method at start of each
     }
 
-    // TODO also block some lines with verticalAlternating, eg block middle 3
+    @Test
+    fun completeChallengePrint() {
+        NeuralAiChallengeBuilder.completeChallenge().forEach {
+            it.print()
+        }
+    }
+
     @Test
     fun neuralChallenge() {
-        val handler = EvolutionHandler()
+        val handler = StoredHandler
+        handler.loadStored()
 
-        val pilesEverywhere = NeuralAiChallengeBuilder.alternatingPilesEverywhere(Connect4Game())
-        val mixed = NeuralAiChallengeBuilder.horizontalT(2, pilesEverywhere.game)
+        var max: Pair<Int, StoredNeuralAI>? = null
 
-        val challenges = listOf(
-            NeuralAiChallengeBuilder.empty(),
-            pilesEverywhere,
-            mixed
-        ) + (0..5).map {
-            NeuralAiChallengeBuilder.verticalPiles(it, 3, Connect4Game())
-        } + (0..4).map {
-            NeuralAiChallengeBuilder.horizontalT(it, Connect4Game())
-        } + (0..5).map {
-            NeuralAiChallengeBuilder.horizontalL(it, Connect4Game())
-        } + (0..5).map {
-            NeuralAiChallengeBuilder.horizontalFlippedL(it, Connect4Game())
-        }
-
-        println("maxScore: ${challenges.count()}")
-
-        handler.allNeurals().forEach { neuralCounter ->
-            val ai = neuralCounter.ai
+        handler.allNeurals().forEach { ai ->
             var aiScore = 0
 
-            challenges.forEach {
+            NeuralAiChallengeBuilder.completeChallenge().forEach {
                 if (evaluate(ai, it)) {
                     aiScore++
                 }
             }
 
+            if(max == null || max!!.first < aiScore) {
+                max = aiScore to ai
+            }
+
             println("$aiScore: ${ai.info()}")
+        }
+
+        println(max!!.first)
+        println(max!!.second.info())
+    }
+
+    @Test
+    fun nonNeuralChallenge() {
+        ((0..6).map { FakeAi(it) } + listOf(SimpleLengthAI(), BalancedMonteCarloAI(500))).forEach { ai ->
+            var aiScore = 0
+
+            NeuralAiChallengeBuilder.completeChallenge().forEach {
+                if (evaluate(ai, it)) {
+                    aiScore++
+                }
+            }
+            println("$aiScore ${ai.name}")
         }
     }
 }

@@ -85,6 +85,10 @@ private fun Application.body(debug: Boolean) {
     with(Connect4ConnectionHandler) {
         with(Connect4GameHandler) {
             with(environment) {
+                launch(Dispatchers.IO) {
+                    loadStored()
+                    //loadStored(listOf("c50", "c104"))
+                }
                 if (debug) {
                     launch(Dispatchers.IO) {
                         while (true) {

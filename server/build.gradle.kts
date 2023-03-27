@@ -26,7 +26,9 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
-    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-api:0.4.0")
+    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-api:0.5.1")
+    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-impl:0.5.1")
+    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-tensorflow:0.5.1")
 
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.388")
     implementation("ch.qos.logback:logback-classic:1.2.11") // TODO 1.4.1

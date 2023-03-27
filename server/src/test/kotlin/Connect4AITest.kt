@@ -1,14 +1,14 @@
 import connect4.ai.AI
 import connect4.ai.AIs
-import connect4.ai.length.BalancedLengthAI
-import connect4.ai.length.DumbLengthAI
-import connect4.ai.length.PlyLengthAI
-import connect4.ai.length.SimpleLengthAI
+import connect4.ai.BattleHandler
+import connect4.ai.length.*
 import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.monte.MaximizeWinsMonteCarloAI
 import connect4.ai.monte.MinimizeLossesMonteCarloAI
-import connect4.ai.neural.*
+import connect4.ai.neural.NeuralAI
+import connect4.ai.neural.StoredHandler
 import connect4.ai.simple.BiasedRandomAI
+import connect4.ai.simple.RandomAI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import org.junit.Test
@@ -18,7 +18,6 @@ import kotlin.time.measureTime
 private fun NeuralAI.nextMovePrint(field: List<List<Player?>>, availableColumns: List<Int>, player: Player) =
     nextMoveRanked(field, availableColumns, player).forEach { println(it) }
 
-// TODO cleanup and implement some actual tests
 @OptIn(ExperimentalTime::class)
 class Connect4AITest {
     private fun battle(games: Int, players: List<AI>, log: Boolean) {
@@ -61,8 +60,18 @@ class Connect4AITest {
     }
 
     @Test
-    fun lengthAITest() {
-        val x = measureTime {
+    fun battleLengthTest() {
+        println(measureTime {
+            battle(
+                1,
+                listOf(
+                    BalancedMonteCarloAI(1000),
+                    PlyLengthAI()
+                ),
+                true
+            )
+        })
+        println(measureTime {
             battle(
                 1,
                 listOf(
@@ -75,99 +84,86 @@ class Connect4AITest {
                 ),
                 true
             )
+        })
+    }
+
+    //  rough estimation of relative AI strength
+    //      RandomAI: 115.0
+    //      BiasedRandomAI: 115.0
+    //      DumbLengthAI: 135.0
+    //      AggressiveLengthAI: 175.0
+    //      MaximizeWinsMonteCarloAI(100): 195.0
+    //      MinimizeLossesMonteCarloAI(100): 235.0
+    //      DefensiveLengthAI: 230.0
+    //      SimpleLengthAI: 360.0
+    //      MaximizeWinsMonteCarloAI(300): 375.0
+    //      MinimizeLossesMonteCarloAI(500): 385.0
+    //      MinimizeLossesMonteCarloAI(300): 410.0
+    //      MaximizeWinsMonteCarloAI(500): 445.0
+    //      PlyLengthAI: 610.0
+    //      MinimizeLossesMonteCarloAI(800): 630.0
+    //      MaximizeWinsMonteCarloAI(800): 660.0
+    @Test
+    fun relativeAiStrength() {
+        val aiScores = listOf(
+            RandomAI(),
+            BiasedRandomAI(),
+            DumbLengthAI(),
+            AggressiveLengthAI(),
+            DefensiveLengthAI(),
+            SimpleLengthAI(),
+            PlyLengthAI()
+        ).map { it to mutableListOf<Int>() }
+
+        repeat(10) { round ->
+            println(round)
+            aiScores.forEach { (ai, scores) ->
+                var winning = true
+                var strength = 50
+
+                while (winning) {
+                    val monteCarloAI = BalancedMonteCarloAI(strength)
+                    val p1Result = Connect4Game.runGame(ai, monteCarloAI)
+                    val p2Result = Connect4Game.runGame(monteCarloAI, ai)
+
+                    if (p1Result.first != Player.FirstPlayer && p2Result.first != Player.SecondPlayer) {
+                        winning = false
+                    }
+                    strength += 50
+                }
+                scores += strength
+            }
         }
-        println(x)
+
+        aiScores.map { (ai, scores) -> ai to scores.average() }.forEach { (ai, score) ->
+            println("${ai.name}: $score")
+        }
     }
 
     @Test
     fun neuralTest() {
-        val handler = EvolutionHandler()
+        val handler = StoredHandler
+        handler.loadStored()
 
         val toEvaluate = listOf(
-            "neural" to handler.allNeurals().map { {it.ai} },
-            "simple" to AIs.simpleAIs,
-            "medium" to AIs.mediumAIs,
-            "high" to AIs.highAIs
+            "neural" to handler.allNeurals(),
+            "simple" to AIs.simpleAIs.map { it() },
+            "medium" to AIs.mediumAIs.map { it() },
+            "high" to AIs.highAIs.map { it() },
+            "plyLength" to listOf(PlyLengthAI()),
+            "monte1000" to listOf(BalancedMonteCarloAI(1000))
         )
+
+        val battleHandler = BattleHandler(handler.allNeurals())
 
         toEvaluate.forEach { (aiName, ais) ->
             println(aiName)
-            repeat(10) {
+            repeat(20) {
                 println(it)
-                repeat(handler.allNeurals().size) {
-                    handler.battle(ais)
-                }
+                battleHandler.battle(ais)
             }
-            handler.currentScore()
-            handler.resetBattles()
-        }
-    }
-
-    // let this run to train and store a lot of neurals
-    // use neuralTest to evaluate them later
-    @Test
-    fun purgeEvolve() {
-        val handler = EvolutionHandler()
-        val trainingPlayers = listOf(
-            { SimpleLengthAI() },
-            { BalancedLengthAI() },
-            { BalancedLengthAI() },
-            { DumbLengthAI() },
-            { PlyLengthAI() },
-            { PlyLengthAI() },
-            { PlyLengthAI() },
-            { MaximizeWinsMonteCarloAI(300) },
-            { MaximizeWinsMonteCarloAI(500) },
-            { MinimizeLossesMonteCarloAI(500) },
-            { BalancedMonteCarloAI(700) },
-            { BalancedMonteCarloAI(400) },
-            { BalancedMonteCarloAI(1000) },
-            { BalancedMonteCarloAI(200) }).map { it() }
-        val battlePlayers = listOf(
-            { SimpleLengthAI() },
-            { PlyLengthAI() },
-            { BalancedMonteCarloAI(400) },
-            { BalancedMonteCarloAI(700) }
-        )
-
-        val moves = getTrainingMoves(trainingPlayers)
-
-        handler.initWithBasicNeurals(moves)
-        handler.initWithRandom(10, moves)
-
-        println(moves.size)
-
-
-        println("start training")
-        handler.train(handler.allNeurals(), moves)
-        repeat(10) {
-            println(it)
-            repeat(handler.allNeurals().size) {
-                handler.battle(battlePlayers)
-            }
-        }
-        println("initial battles done")
-        handler.purge()
-        handler.evolve()
-        handler.resetBattles()
-
-        repeat(100) { i ->
-            println("outerLoop $i")
-            handler.train(handler.allNeurals(), moves)
-            repeat(10) { j ->
-                println("innerLoop $j")
-                repeat(handler.allNeurals().size) {
-                    handler.battle(battlePlayers)
-                }
-            }
-            handler.currentScore(true, true)
-            handler.storeHighest(5)
-            handler.highestRanking(3).forEach { counter ->
-                handler.storeStrongest(counter.ai)
-            }
-            handler.purge()
-            handler.evolve()
-            handler.resetBattles()
+            battleHandler.currentScore()
+            battleHandler.resetBattles()
         }
     }
 }

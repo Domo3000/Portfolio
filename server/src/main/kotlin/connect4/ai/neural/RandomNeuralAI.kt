@@ -3,11 +3,7 @@ package connect4.ai.neural
 import connect4.game.Player
 import connect4.game.sizeX
 import connect4.game.sizeY
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import org.jetbrains.kotlinx.dl.api.core.SavingFormat
 import org.jetbrains.kotlinx.dl.api.core.Sequential
-import org.jetbrains.kotlinx.dl.api.core.WritingMode
 import org.jetbrains.kotlinx.dl.api.core.activation.Activations
 import org.jetbrains.kotlinx.dl.api.core.initializer.*
 import org.jetbrains.kotlinx.dl.api.core.layer.Layer
@@ -21,8 +17,6 @@ import org.jetbrains.kotlinx.dl.api.core.layer.reshaping.Flatten
 import org.jetbrains.kotlinx.dl.api.core.loss.Losses
 import org.jetbrains.kotlinx.dl.api.core.metric.Metrics
 import org.jetbrains.kotlinx.dl.api.core.optimizer.Adam
-import org.jetbrains.kotlinx.dl.api.core.optimizer.ClipGradientByValue
-import java.io.File
 import java.time.Instant
 import kotlin.random.Random
 
@@ -32,19 +26,13 @@ fun <T> randomChoice(random: Random, first: T, second: T) = if (random.nextBoole
     second
 }
 
-@Serializable
-data class AdditionalInfo(
-    val losses: Losses,
-    val metrics: Metrics
-)
-
 object NeuralAIFactory {
     private val random = Random(Instant.now().toEpochMilli())
 
-    fun inputLayer() = Input(
+    fun inputLayer(dims: Long) = Input(
         sizeX.toLong(),
         sizeY.toLong(),
-        1L
+        dims
     )
 
     private fun defaultOutputLayer() = Dense(
@@ -154,7 +142,7 @@ object NeuralAIFactory {
     )
 
     fun randomConv2DLayer(): Layer {
-        val filters = random.nextInt(2, 9)
+        val filters = random.nextInt(2, 64)
         val kernelSize = random.nextInt(2, 6)
         val activation = randomActivation()
         val initializer = randomInitializer(random.nextLong())
@@ -208,14 +196,21 @@ object NeuralAIFactory {
     }
 
     fun getRandomDenseLayers(): List<Layer> =
-        (0..(random.nextInt(0, 5))).map { randomDenseLayer(random.nextInt(12, 200)) }
+        (0..(random.nextInt(0, 5))).map { randomDenseLayer(random.nextInt(12, 300)) }
 
     fun getOutputLayer(): Layer = randomChoice(random, defaultOutputLayer(), randomDenseLayer(7))
 }
 
 
-fun Layer.name(): String = when (this) {
-    is Input -> "Input()"
+fun Layer.name(inputSingular: Boolean): String = when (this) {
+    is Input -> "Input(${
+        if (inputSingular) {
+            1
+        } else {
+            2
+        }
+    })"
+
     is Dense -> "Dense($outputSize/${activation.name})"
     is Conv2D -> "Conv($filters/${kernelSize.contentToString()}/${activation.name})"
     is AvgPool2D -> "Avg2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
@@ -255,6 +250,49 @@ fun Layer.copy(): Layer = when (this) {
     )
 
     else -> throw Exception("unhandled Layer")
+}
+
+fun Layer.softRandomize(): Layer {
+    val random = Random(Instant.now().toEpochMilli())
+
+    return when (this) {
+        is Dense -> {
+            NeuralAIFactory.randomDenseLayer(outputSize) as Dense
+        }
+
+        is Conv2D -> {
+            val new = NeuralAIFactory.randomConv2DLayer() as Conv2D
+            Conv2D(
+                filters = filters,
+                kernelSize = kernelSize,
+                strides = strides,
+                activation = randomChoice(random, activation, new.activation),
+                kernelInitializer = randomChoice(random, kernelInitializer, new.kernelInitializer),
+                biasInitializer = randomChoice(random, biasInitializer, new.biasInitializer),
+                padding = padding
+            )
+        }
+
+        is AvgPool2D -> {
+            val new = NeuralAIFactory.randomAvg2DLayer() as AvgPool2D
+            AvgPool2D(
+                poolSize = randomChoice(random, poolSize, new.poolSize),
+                strides = randomChoice(random, strides, new.strides),
+                padding = randomChoice(random, padding, new.padding)
+            )
+        }
+
+        is MaxPool2D -> {
+            val new = NeuralAIFactory.randomMax2DLayer() as MaxPool2D
+            MaxPool2D(
+                poolSize = randomChoice(random, poolSize, new.poolSize),
+                strides = randomChoice(random, strides, new.strides),
+                padding = randomChoice(random, padding, new.padding)
+            )
+        }
+
+        else -> throw Exception("unhandled Layer")
+    }
 }
 
 fun Layer.randomize(): Layer {
@@ -306,21 +344,18 @@ fun Layer.randomize(): Layer {
     }
 }
 
-private val json = Json {
-    ignoreUnknownKeys = true
-    classDiscriminator = "class"
-}
-
 class RandomNeuralAI(
     training: List<Move> = emptyList(),
+    inputType: Boolean,
     conv: List<Layer>? = null,
     dense: List<Layer>? = null,
     output: Layer? = null,
     losses: Losses? = null,
     metrics: Metrics? = null,
     private val age: Int = 0
-) : NeuralAI(training) {
-    val timeStamp = Instant.now().toEpochMilli()
+) : NeuralAI(inputType) {
+    private val timeStamp = Instant.now().toEpochMilli()
+    private val inputSingular = inputType
     val convLayer = conv?.map { it.copy() } ?: NeuralAIFactory.getRandomConvLayers()
     val denseLayer = dense?.map { it.copy() } ?: NeuralAIFactory.getRandomDenseLayers()
     val outputLayer = output?.copy() ?: NeuralAIFactory.getOutputLayer()
@@ -328,17 +363,25 @@ class RandomNeuralAI(
     val metric = metrics ?: NeuralAIFactory.randomMetrics()
 
     private val fullBrain: List<Layer> = run {
-        // TODO sometimes RandomNeurals throw an error during training -> flatten between incompatible convLayers?
-
-        listOf(NeuralAIFactory.inputLayer()) + convLayer + Flatten() + denseLayer + outputLayer
+        val dims = if (inputSingular) {
+            1L
+        } else {
+            2L
+        }
+        listOf(NeuralAIFactory.inputLayer(dims)) + convLayer + Flatten() + denseLayer + outputLayer
     }
 
     override val brain = Sequential.of(fullBrain.map { it })
 
     override val name: String = "RandomNeural(${timeStamp}:${age})"
 
-    fun info() =
-        "$name: {" + loss + ", " + metric + ", " + fullBrain.map { it.name() }.joinToString(", ", " ", " ") + "}"
+    override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int =
+        nextMoveRanked(field, availableColumns, player)
+            .map { it.first }
+            .first()
+
+    override fun info() =
+        "$name: {$loss, $metric, " + fullBrain.joinToString(", ", " ", " ") { it.name(inputSingular) } + "}"
 
     fun copy(
         training: List<Move>,
@@ -347,87 +390,21 @@ class RandomNeuralAI(
         output: Layer? = outputLayer,
         losses: Losses? = loss,
         metrics: Metrics? = metric
-    ) = RandomNeuralAI(training, conv, dense, output, losses, metrics, age + 1)
+    ) = RandomNeuralAI(training, inputSingular, conv, dense, output, losses, metrics, age + 1)
 
-    fun store(path: String) {
-        val directory = File(path)
-        if (!directory.isDirectory) {
-            directory.mkdir()
-        }
-        brain.save(
-            directory,
-            SavingFormat.JSON_CONFIG_CUSTOM_VARIABLES,
-            true,
-            WritingMode.OVERRIDE,
-        )
-        val additional = File("$path/metrics.json")
-        if (additional.exists()) {
-            additional.delete()
-        }
-        additional.createNewFile()
-        additional.writeText(json.encodeToString(AdditionalInfo.serializer(), AdditionalInfo(loss, metric)))
-    }
-
-    override fun initialize() {
+    init {
         brain.compile(
-            optimizer = Adam(clipGradient = ClipGradientByValue(0.1f)),
-            loss = loss,
-            metric = metric
+            optimizer = Adam(),
+            loss = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+            metric = Metrics.ACCURACY
         )
 
         brain.init()
 
         brain.fit(
-            training.toDataset(Player.FirstPlayer),
+            training.toDataset(Player.FirstPlayer, inputSingular),
             epochs,
-            1000
+            100
         )
-    }
-
-    init {
-        initialize()
-    }
-
-    companion object {
-        fun fromStorage(neuralDirectory: File): RandomNeuralAI {
-            val file = File(neuralDirectory.path + "/modelConfig.json")
-            val additionalFile = File(neuralDirectory.path + "/metrics.json")
-            val stored = Sequential.loadModelConfiguration(file)
-            val additionalInfo = json.decodeFromString(AdditionalInfo.serializer(), additionalFile.readText())
-            val loaded = fromStored(stored, additionalInfo)
-            println("${neuralDirectory.path}: ${loaded.name}")
-            return loaded
-        }
-
-        private fun fromStored(brain: Sequential, additionalInfo: AdditionalInfo?): RandomNeuralAI {
-            val convLayers = mutableListOf<Layer>()
-            val denseLayers = mutableListOf<Layer>()
-            var outputLayer: Layer? = null
-
-            brain.layers.forEach {
-                when (it) {
-                    is Conv2D -> convLayers.add(it)
-                    is AvgPool2D -> convLayers.add(it)
-                    is MaxPool2D -> convLayers.add(it)
-                    is Dense -> if (it.outputSize != 7) {
-                        denseLayers.add(it)
-                    } else {
-                        outputLayer = it
-                    }
-
-                    else -> {}
-                }
-            }
-
-            return RandomNeuralAI(
-                emptyList(),
-                convLayers,
-                denseLayers,
-                outputLayer,
-                additionalInfo?.losses ?: Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
-                additionalInfo?.metrics ?: Metrics.ACCURACY,
-                100
-            )
-        }
     }
 }
