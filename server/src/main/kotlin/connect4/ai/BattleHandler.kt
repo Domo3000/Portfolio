@@ -68,4 +68,6 @@ class BattleHandler(players: List<AI>) {
             it.gamesPlayed = 0
         }
     }
+
+    fun highest(): AI = counters.maxBy { it.gamesWon }.ai
 }

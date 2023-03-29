@@ -1,12 +1,9 @@
 import connect4.ai.AI
-import connect4.ai.AIs
-import connect4.ai.BattleHandler
 import connect4.ai.length.*
 import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.monte.MaximizeWinsMonteCarloAI
 import connect4.ai.monte.MinimizeLossesMonteCarloAI
 import connect4.ai.neural.NeuralAI
-import connect4.ai.neural.StoredHandler
 import connect4.ai.simple.BiasedRandomAI
 import connect4.ai.simple.RandomAI
 import connect4.game.Connect4Game
@@ -105,6 +102,10 @@ class Connect4AITest {
     //      MaximizeWinsMonteCarloAI(800): 660.0
     @Test
     fun relativeAiStrength() {
+        //val storedHandler = StoredHandler()
+        //storedHandler.loadStored(emptyList(), "s")
+        //val aiScores = storedHandler.allNeurals().map { it to mutableListOf<Int>() }
+
         val aiScores = listOf(
             RandomAI(),
             BiasedRandomAI(),
@@ -137,33 +138,6 @@ class Connect4AITest {
 
         aiScores.map { (ai, scores) -> ai to scores.average() }.forEach { (ai, score) ->
             println("${ai.name}: $score")
-        }
-    }
-
-    @Test
-    fun neuralTest() {
-        val handler = StoredHandler
-        handler.loadStored()
-
-        val toEvaluate = listOf(
-            "neural" to handler.allNeurals(),
-            "simple" to AIs.simpleAIs.map { it() },
-            "medium" to AIs.mediumAIs.map { it() },
-            "high" to AIs.highAIs.map { it() },
-            "plyLength" to listOf(PlyLengthAI()),
-            "monte1000" to listOf(BalancedMonteCarloAI(1000))
-        )
-
-        val battleHandler = BattleHandler(handler.allNeurals())
-
-        toEvaluate.forEach { (aiName, ais) ->
-            println(aiName)
-            repeat(20) {
-                println(it)
-                battleHandler.battle(ais)
-            }
-            battleHandler.currentScore()
-            battleHandler.resetBattles()
         }
     }
 }

@@ -5,17 +5,26 @@ import react.Props
 import react.dom.html.ReactHTML
 
 val Implementation = FC<Props> {
-    ReactHTML.h4 {
+    ReactHTML.h4 { // TODO style guide -> what looks better, strong or h4?
         +"Connect 4 Implementation"
     }
     ReactHTML.p {
         ReactHTML.a {
-            href = "https://github.com/Domo3000/Portfolio/tree/main/connect4/src/main/kotlin"
-            +"Source Code"
+            href = "https://github.com/Domo3000/Portfolio/tree/main/shared-connect4/src/commonMain/kotlin"
+            +"Common Source Code"
         }
     }
     ReactHTML.p {
-        +"TODO link to Frontend and Backend codes as well, and explain more stuff."
+        ReactHTML.a {
+            href = "https://github.com/Domo3000/Portfolio/tree/main/connect4/src/main/kotlin"
+            +"Frontend Source Code"
+        }
+    }
+    ReactHTML.p {
+        ReactHTML.a {
+            href = "https://github.com/Domo3000/Portfolio/tree/main/server/src/main/kotlin/connect4"
+            +"Backend Source Code"
+        }
     }
     ReactHTML.details {
         ReactHTML.summary {
@@ -31,6 +40,15 @@ val Implementation = FC<Props> {
         }
         ReactHTML.p {
             +"TODO link to kotlindl"
+        }
+        ReactHTML.p {
+            +"TODO explain link to various training techniques"
+        }
+        ReactHTML.p {
+            +"TODO example network layout"
+        }
+        ReactHTML.p {
+            +"TODO explain evolution"
         }
     }
     ReactHTML.details {

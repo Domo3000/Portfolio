@@ -201,24 +201,6 @@ object NeuralAIFactory {
     fun getOutputLayer(): Layer = randomChoice(random, defaultOutputLayer(), randomDenseLayer(7))
 }
 
-
-fun Layer.name(inputSingular: Boolean): String = when (this) {
-    is Input -> "Input(${
-        if (inputSingular) {
-            1
-        } else {
-            2
-        }
-    })"
-
-    is Dense -> "Dense($outputSize/${activation.name})"
-    is Conv2D -> "Conv($filters/${kernelSize.contentToString()}/${activation.name})"
-    is AvgPool2D -> "Avg2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
-    is MaxPool2D -> "Max2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
-    is Flatten -> "Flatten()"
-    else -> throw Exception("unhandled Layer")
-}
-
 fun Layer.copy(): Layer = when (this) {
     is Dense -> Dense(
         outputSize = outputSize,
@@ -379,9 +361,6 @@ class RandomNeuralAI(
         nextMoveRanked(field, availableColumns, player)
             .map { it.first }
             .first()
-
-    override fun info() =
-        "$name: {$loss, $metric, " + fullBrain.joinToString(", ", " ", " ") { it.name(inputSingular) } + "}"
 
     fun copy(
         training: List<Move>,

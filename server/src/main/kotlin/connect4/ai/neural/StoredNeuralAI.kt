@@ -19,8 +19,6 @@ class StoredNeuralAI(
     ) : NeuralAI(inputType) {
     override val name: String = "StoredNeural($path)"
 
-    override fun info(): String = "$name: ${brain.layers.joinToString(",") { it.name }}"
-
     companion object {
         fun fromStorage(path: String): StoredNeuralAI {
             val neuralDirectory = File("${System.getProperty("user.dir")}/neurals/$path")
@@ -30,8 +28,6 @@ class StoredNeuralAI(
             stored.compile(Adam(), Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS, Metrics.ACCURACY)
             stored.loadWeights(neuralDirectory, true)
             val additionalInfo = json.decodeFromString(AdditionalInfo.serializer(), additionalFile.readText())
-            val loaded = StoredNeuralAI(additionalInfo.input, path, stored)
-            println("${neuralDirectory.path}: ${loaded.info()}")
             return StoredNeuralAI(additionalInfo.input, path, stored)
         }
     }

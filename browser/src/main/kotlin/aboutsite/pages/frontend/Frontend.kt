@@ -46,6 +46,15 @@ val FrontendComponent = FC<Props> {
                     "https://github.com/Domo3000/Portfolio/blob/main/browser/src/main/kotlin/projects/ProjectOverview.kt"
                 +"ProjectOverview.externalCanvas(name: String)"
             }
+            +"."
+        }
+        p {
+            +"When one of the ExternalCanvas projects receives their Initialize Event they will use "
+            a {
+                href = "https://react.dev/reference/react-dom/client/hydrateRoot"
+                +"hydrateRoot()"
+            }
+            +" to display themselves."
         }
     }
 }

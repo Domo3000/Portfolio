@@ -23,7 +23,7 @@ val BackendComponent = FC<Props> {
         p {
             +"A small "
             a {
-                href = "https://github.com/Domo3000/Portfolio/tree/main/server"
+                href = "https://github.com/Domo3000/Portfolio/tree/main/server/src/main/kotlin"
                 +"server"
             }
             +" that uses "

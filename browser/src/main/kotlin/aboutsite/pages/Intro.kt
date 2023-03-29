@@ -55,7 +55,7 @@ val IntroComponent = FC<Props> {
                 href = "https://github.com/Domo3000/Portfolio"
                 +"Github"
             }
-            +", but this site is also trying to be self-documenting."
+            +", but this site is also trying to be a bit self-documenting."
         }
 
         strong { // TODO strong, h4 or something, follow some styleguide

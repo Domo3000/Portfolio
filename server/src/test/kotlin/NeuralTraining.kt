@@ -4,14 +4,19 @@ import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.monte.MaximizeWinsMonteCarloAI
 import connect4.ai.monte.MinimizeLossesMonteCarloAI
 import connect4.ai.neural.EvolutionHandler
+import connect4.ai.neural.NeuralCounter
+import connect4.ai.neural.PredefinedNeurals
 import connect4.ai.neural.getTrainingMoves
 import org.junit.Test
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTime
 
-// Use these to train neurals in various ways
-// use neuralTest to evaluate them later
-@OptIn(ExperimentalTime::class)
+/*
+    Use these to train neurals in various ways
+    use neuralFilteredStrengthTest or neuralChallenge to evaluate them later
+
+    after some time neurals might get overfitted
+    so after each iteration we store the highest and delete the weakest
+    softEvolve creates copies of the strongest with new random activation functions
+ */
 class NeuralTraining {
     private val trainingPlayers = listOf(
         BalancedLengthAI(),
@@ -24,54 +29,71 @@ class NeuralTraining {
         BalancedMonteCarloAI(800)
     )
 
-    private val battlePlayers = listOf(
-        { BalancedLengthAI() },
-        { DefensiveLengthAI() },
-        { AggressiveLengthAI() },
-        { MinimizeLossesMonteCarloAI(500) },
-        { MaximizeWinsMonteCarloAI(500) },
-        { BalancedMonteCarloAI(500) }
-    )
-
-    // TODO lots of repetitive code
-
-    @Test
-    fun battleEvolve() {
-        val handler = EvolutionHandler()
-
+    private fun evaluateAndTrain(
+        prefix: String,
+        handler: EvolutionHandler,
+        newTrainingPlayers: () -> List<AI>,
+        evaluate: (List<NeuralCounter>) -> Unit
+    ) {
         val initialMoves = getTrainingMoves(trainingPlayers)
-        handler.initWithBasicNeurals(initialMoves)
-        handler.initWithComplexNeurals(initialMoves)
-        handler.initWithRandom(10)
+        handler.initPredefinedNeurals("basic") { random -> PredefinedNeurals.basic(initialMoves, random) }
+        handler.initPredefinedNeurals("complex") { random -> PredefinedNeurals.complex(initialMoves, random) }
+        handler.initWithRandom(10, initialMoves)
 
         var c = 0
 
         repeat(100) { i ->
             println("outerLoop $i")
-            repeat(10) { j ->
-                println(j)
-                repeat(handler.allNeurals().size) {
-                    handler.battle(battlePlayers)
-                }
-            }
-            handler.currentScore(true, true)
+            evaluate(handler.allNeurals())
+            handler.currentScore(false, true)
             handler.purge()
 
-            val newMoves = getTrainingMoves(trainingPlayers)
-            handler.highestRanking(2).forEach { counter ->
-                println("highestRanking: b${c} = ${counter.ai.info()}")
-                counter.ai.store("b${c++}")
+            val newMoves = getTrainingMoves(newTrainingPlayers())
+
+            handler.highestRanking(1).forEach { counter ->
                 handler.softEvolve(counter.ai, newMoves)
             }
 
+            handler.highestRanking(2).forEach { counter ->
+                println("highestRanking: $prefix${c} = ${counter.ai.info()}")
+                counter.ai.store("$prefix${c++}")
+            }
+
+            handler.initWithRandom(2, newMoves)
+
             handler.resetBattles()
             println("start training")
-            println(measureTime {
-                handler.train(handler.allNeurals(), newMoves)
-            })
+            handler.train(handler.allNeurals(), newMoves)
         }
     }
 
+    // slowest, but most accurate
+    @Test
+    fun battleEvolve() {
+        val handler = EvolutionHandler()
+
+        // TODO start out with weaker players and get stronger as Neurals do?
+        val battlePlayers = listOf(
+            { BalancedLengthAI() },
+            { SimpleLengthAI() },
+            { DefensiveLengthAI() },
+            { AggressiveLengthAI() },
+            { PlyLengthAI() },
+            { BalancedMonteCarloAI(500) }
+        )
+
+        evaluateAndTrain("b", handler, { trainingPlayers }) { allNeurals ->
+            repeat(10) { j ->
+                println(j)
+                repeat(allNeurals.size) {
+                    handler.battle(battlePlayers)
+                }
+            }
+        }
+    }
+
+    // probably not as accurate, as we just look if they made the same moves
+    // but in many instances multiple different moves are just as valid
     @Test
     fun evaluateEvolve() {
         val handler = EvolutionHandler()
@@ -84,99 +106,31 @@ class NeuralTraining {
             BalancedMonteCarloAI(500)
         )
 
-        val initialMoves = getTrainingMoves(trainingPlayers)
-        handler.initWithBasicNeurals(initialMoves)
-        handler.initWithComplexNeurals(initialMoves)
-        handler.initWithRandom(10)
-
-        var c = 0
-
-        repeat(100) { i ->
-            println("outerLoop $i")
-
+        evaluateAndTrain("e", handler, { trainingPlayers }) { allNeurals ->
             val evalMoves = getTrainingMoves(evaluationPlayers)
 
-            val evalResults = handler.allNeurals().map { counter ->
+            allNeurals.map { counter ->
                 val loss = counter.ai.evaluate(evalMoves)
                 println("$loss: ${counter.ai.info()}")
                 counter to loss
-            }.sortedBy { it.second }
-
-            evalResults.sortedByDescending { it.second }.mapIndexed { n, (counter, _) ->
+            }.sortedByDescending { it.second }.mapIndexed { n, (counter, _) ->
                 counter.gamesWon = n
             }
-
-            handler.purge()
-
-            val trainingMoves = getTrainingMoves(trainingPlayers)
-
-            evalResults.take(3).forEach { (counter, loss) ->
-                println("lowestLoss: e${c} = $loss: ${counter.ai.info()}")
-                counter.ai.store("e${c++}")
-                handler.softEvolve(counter.ai, trainingMoves)
-            }
-
-            handler.resetBattles()
-            println("start training")
-            println(measureTime {
-                handler.train(handler.allNeurals(), trainingMoves)
-            })
         }
     }
 
-    @Test
-    fun playAgainstSelfEvolve() {
-        val handler = EvolutionHandler()
-
-        val initialMoves = getTrainingMoves(trainingPlayers + trainingPlayers)
-        handler.initWithBasicNeurals(initialMoves)
-        handler.initWithComplexNeurals(initialMoves)
-        handler.initWithRandom(10)
-
-        var c = 0
-
-        repeat(100) { i ->
-            println("outerLoop $i")
-
-            handler.allNeurals().forEach { counter ->
-                handler.battle(handler.allNeurals().map { { it.ai } }, counter)
-            }
-            handler.currentScore(true, true)
-
-            handler.purge(30)
-
-            val list: List<AI> = handler.highestRanking(8).map { it.ai }
-            val moves = getTrainingMoves(list)
-
-            handler.highestRanking(2).forEach { counter ->
-                println("highestRanking: s${c} = ${counter.ai.info()}")
-                counter.ai.store("s${c++}")
-                handler.softEvolve(counter.ai, moves)
-            }
-
-            handler.resetBattles()
-            println("start training")
-            println(measureTime {
-                handler.train(handler.allNeurals(), moves)
-            })
-        }
-    }
-
+    // similar to evaluateEvolve, but with handcrafted challenges with multiple correct answers
+    // problem could be that answers aren't as correct as I expect them to be. E.g:
+    //   B
+    //   B
+    //  AA
+    // here I'm expecting 0 or 3, but 4 would also be correct and probably smarter
     @Test
     fun challengeEvolve() {
         val handler = EvolutionHandler()
 
-        val initialMoves = getTrainingMoves(trainingPlayers)
-        handler.initWithBasicNeurals(initialMoves)
-        handler.initWithComplexNeurals(initialMoves)
-        handler.initWithRandom(10)
-
-        var c = 0
-
-        repeat(100) { i ->
-            println(i)
-
-            handler.allNeurals().forEach { neuralCounter ->
+        evaluateAndTrain("del", handler, { trainingPlayers }) { allNeurals ->
+            allNeurals.forEach { neuralCounter ->
                 val ai = neuralCounter.ai
                 var aiScore = 0
 
@@ -190,19 +144,39 @@ class NeuralTraining {
 
                 neuralCounter.gamesWon = aiScore
             }
+        }
+    }
 
-            handler.currentScore(false, true)
-            handler.purge()
+    // faster than regular battleEvolve, but could be garbage in garbage out
+    @Test
+    fun playAgainstSelfEvolve() {
+        val handler = EvolutionHandler()
 
-            val moves = getTrainingMoves(trainingPlayers)
-
-            handler.highestRanking(2).forEach { counter ->
-                println("highestRanking: c${c} = ${counter.ai.info()}")
-                counter.ai.store("c${c++}")
-                handler.softEvolve(counter.ai, moves)
+        evaluateAndTrain("s", handler, {
+            handler.highestRanking(7).map { it.ai }
+        }) { allNeurals ->
+            allNeurals.forEach { counter ->
+                handler.battle(allNeurals.map { { it.ai } }, counter)
             }
-            handler.resetBattles()
-            handler.train(handler.allNeurals(), moves)
+        }
+    }
+
+    // faster than regular battleEvolve, and less garbage in than pure playAgainstSelf
+    @Test
+    fun playAgainstSelfMixedEvolve() {
+        val handler = EvolutionHandler()
+
+        val battlePlayers: List<AI> = listOf(
+            BalancedLengthAI(),
+            PlyLengthAI()
+        )
+
+        evaluateAndTrain("m", handler, {
+            battlePlayers + handler.highestRanking(5).map { it.ai }
+        }) { allNeurals ->
+            allNeurals.forEach { counter ->
+                handler.battle(allNeurals.map { { it.ai } }, counter)
+            }
         }
     }
 }

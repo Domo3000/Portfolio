@@ -7,6 +7,13 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.kotlinx.dl.api.core.SavingFormat
 import org.jetbrains.kotlinx.dl.api.core.Sequential
 import org.jetbrains.kotlinx.dl.api.core.WritingMode
+import org.jetbrains.kotlinx.dl.api.core.layer.Layer
+import org.jetbrains.kotlinx.dl.api.core.layer.convolutional.Conv2D
+import org.jetbrains.kotlinx.dl.api.core.layer.core.Dense
+import org.jetbrains.kotlinx.dl.api.core.layer.core.Input
+import org.jetbrains.kotlinx.dl.api.core.layer.pooling.AvgPool2D
+import org.jetbrains.kotlinx.dl.api.core.layer.pooling.MaxPool2D
+import org.jetbrains.kotlinx.dl.api.core.layer.reshaping.Flatten
 import org.jetbrains.kotlinx.dl.dataset.Dataset
 import org.jetbrains.kotlinx.dl.dataset.OnHeapDataset
 import java.io.File
@@ -85,6 +92,16 @@ fun List<Move>.toDataset(player: Player, inputSingular: Boolean): Dataset = OnHe
     }
 )
 
+fun Layer.name(): String = when (this) {
+    is Input -> "Input(${packedDims[2]})"
+    is Dense -> "Dense($outputSize/${activation.name})"
+    is Conv2D -> "Conv($filters/${kernelSize.contentToString()}/${activation.name})"
+    is AvgPool2D -> "Avg2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
+    is MaxPool2D -> "Max2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
+    is Flatten -> "Flatten()"
+    else -> throw Exception("unhandled Layer")
+}
+
 abstract class NeuralAI(
     private val inputSingular: Boolean
 ) : AI() {
@@ -136,7 +153,8 @@ abstract class NeuralAI(
             list.toDataset(Player.FirstPlayer, inputSingular)
         ).lossValue
 
-    abstract fun info(): String
+    fun info() =
+        "$name: {${brain.layers.joinToString(", ", " ", " ") { it.name() }}}"
 
     fun store(path: String) {
         val baseDirectory = "${System.getProperty("user.dir")}/neurals"
