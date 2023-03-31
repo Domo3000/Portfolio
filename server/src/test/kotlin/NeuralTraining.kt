@@ -51,7 +51,7 @@ class NeuralTraining {
             val newMoves = getTrainingMoves(newTrainingPlayers())
 
             handler.highestRanking(1).forEach { counter ->
-                handler.softEvolve(counter.ai, newMoves)
+                handler.evolve(counter.ai, newMoves)
             }
 
             handler.highestRanking(2).forEach { counter ->
@@ -124,12 +124,12 @@ class NeuralTraining {
     //   B
     //   B
     //  AA
-    // here I'm expecting 0 or 3, but 4 would also be correct and probably smarter
+    // here I'm expecting 0 or 3, but 4 could also be correct and probably smarter
     @Test
     fun challengeEvolve() {
         val handler = EvolutionHandler()
 
-        evaluateAndTrain("del", handler, { trainingPlayers }) { allNeurals ->
+        evaluateAndTrain("c", handler, { trainingPlayers }) { allNeurals ->
             allNeurals.forEach { neuralCounter ->
                 val ai = neuralCounter.ai
                 var aiScore = 0
@@ -154,7 +154,7 @@ class NeuralTraining {
 
         evaluateAndTrain("s", handler, {
             handler.highestRanking(7).map { it.ai }
-        }) { allNeurals ->
+        }) { allNeurals -> // fighting 10 times not needed, as they'll always do the same
             allNeurals.forEach { counter ->
                 handler.battle(allNeurals.map { { it.ai } }, counter)
             }
@@ -166,13 +166,13 @@ class NeuralTraining {
     fun playAgainstSelfMixedEvolve() {
         val handler = EvolutionHandler()
 
-        val battlePlayers: List<AI> = listOf(
+        val trainingPlayers: List<AI> = listOf(
             BalancedLengthAI(),
             PlyLengthAI()
         )
 
         evaluateAndTrain("m", handler, {
-            battlePlayers + handler.highestRanking(5).map { it.ai }
+            trainingPlayers + handler.highestRanking(5).map { it.ai }
         }) { allNeurals ->
             allNeurals.forEach { counter ->
                 handler.battle(allNeurals.map { { it.ai } }, counter)

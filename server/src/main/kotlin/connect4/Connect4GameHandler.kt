@@ -58,7 +58,6 @@ object Connect4GameHandler {
             }.mapIndexed { i, r -> i to r }.maxBy { it.second }.first
 
         println(highestOverall)
-
          */
 
         storedHandler.allNeurals().random().nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)

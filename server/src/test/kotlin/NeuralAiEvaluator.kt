@@ -1,12 +1,8 @@
 import connect4.ai.AI
-import connect4.ai.length.BalancedLengthAI
-import connect4.ai.length.PlyLengthAI
 import connect4.ai.length.SimpleLengthAI
 import connect4.ai.monte.BalancedMonteCarloAI
-import connect4.ai.neural.EvolutionHandler
 import connect4.ai.neural.StoredHandler
 import connect4.ai.neural.StoredNeuralAI
-import connect4.ai.neural.getTrainingMoves
 import connect4.game.Connect4Game
 import connect4.game.Player
 import org.junit.Test
@@ -60,7 +56,7 @@ object NeuralAiChallengeBuilder {
         } else {
             listOf(1, 3, 5)
         }
-        return NeuralAiChallenge(game, correct) // TODO adjustable height and expectedMoves
+        return NeuralAiChallenge(game, correct)
     }
 
     //   B
@@ -202,7 +198,7 @@ class NeuralAiEvaluator {
     @Test
     fun neuralChallenge() {
         val handler = StoredHandler()
-        handler.loadStored(emptyList(), "sm")
+        handler.loadStored(emptyList())
 
         var max: Pair<Int, StoredNeuralAI>? = null
 
@@ -236,6 +232,7 @@ class NeuralAiEvaluator {
                     aiScore++
                 }
             }
+
             println("$aiScore ${ai.name}")
         }
     }

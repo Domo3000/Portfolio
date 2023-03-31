@@ -177,7 +177,7 @@ object NeuralAIFactory {
         else -> throw Exception("illegal random")
     }
 
-    fun getRandomConvLayers(): List<Layer> = (0..(random.nextInt(0, 6))).map { randomConvLayer() }
+    fun getRandomConvLayers(): List<Layer> = (0..(random.nextInt(0, 3))).map { randomConvLayer() }
 
     fun dense(size: Int, activation: Activations, initializer: Initializer, biasInitializer: Initializer) =
         Dense(
@@ -187,16 +187,17 @@ object NeuralAIFactory {
             biasInitializer = biasInitializer
         )
 
-    fun randomDenseLayer(outputSize: Int): Layer {
+    fun randomDenseLayer(outputSize: Int? = null): Layer {
+        val size = outputSize ?: random.nextInt(12, 300)
         val activation = randomActivation()
         val initializer = randomInitializer(random.nextLong())
         val biasInitializer = randomInitializer(random.nextLong())
 
-        return dense(outputSize, activation, initializer, biasInitializer)
+        return dense(size, activation, initializer, biasInitializer)
     }
 
     fun getRandomDenseLayers(): List<Layer> =
-        (0..(random.nextInt(0, 5))).map { randomDenseLayer(random.nextInt(12, 300)) }
+        (0..(random.nextInt(0, 3))).map { randomDenseLayer() }
 
     fun getOutputLayer(): Layer = randomChoice(random, defaultOutputLayer(), randomDenseLayer(7))
 }
@@ -234,55 +235,12 @@ fun Layer.copy(): Layer = when (this) {
     else -> throw Exception("unhandled Layer")
 }
 
-fun Layer.softRandomize(): Layer {
-    val random = Random(Instant.now().toEpochMilli())
-
-    return when (this) {
-        is Dense -> {
-            NeuralAIFactory.randomDenseLayer(outputSize) as Dense
-        }
-
-        is Conv2D -> {
-            val new = NeuralAIFactory.randomConv2DLayer() as Conv2D
-            Conv2D(
-                filters = filters,
-                kernelSize = kernelSize,
-                strides = strides,
-                activation = randomChoice(random, activation, new.activation),
-                kernelInitializer = randomChoice(random, kernelInitializer, new.kernelInitializer),
-                biasInitializer = randomChoice(random, biasInitializer, new.biasInitializer),
-                padding = padding
-            )
-        }
-
-        is AvgPool2D -> {
-            val new = NeuralAIFactory.randomAvg2DLayer() as AvgPool2D
-            AvgPool2D(
-                poolSize = randomChoice(random, poolSize, new.poolSize),
-                strides = randomChoice(random, strides, new.strides),
-                padding = randomChoice(random, padding, new.padding)
-            )
-        }
-
-        is MaxPool2D -> {
-            val new = NeuralAIFactory.randomMax2DLayer() as MaxPool2D
-            MaxPool2D(
-                poolSize = randomChoice(random, poolSize, new.poolSize),
-                strides = randomChoice(random, strides, new.strides),
-                padding = randomChoice(random, padding, new.padding)
-            )
-        }
-
-        else -> throw Exception("unhandled Layer")
-    }
-}
-
 fun Layer.randomize(): Layer {
     val random = Random(Instant.now().toEpochMilli())
 
     return when (this) {
         is Dense -> {
-            val new = NeuralAIFactory.randomDenseLayer(random.nextInt(40, 200)) as Dense
+            val new = NeuralAIFactory.randomDenseLayer() as Dense
             Dense(
                 outputSize = randomChoice(random, outputSize, new.outputSize),
                 activation = randomChoice(random, activation, new.activation),
@@ -293,7 +251,7 @@ fun Layer.randomize(): Layer {
 
         is Conv2D -> {
             val new = NeuralAIFactory.randomConv2DLayer() as Conv2D
-            Conv2D(
+            val changed = Conv2D(
                 filters = randomChoice(random, filters, new.filters),
                 kernelSize = randomChoice(random, kernelSize, new.kernelSize),
                 strides = randomChoice(random, strides, new.strides),
@@ -302,24 +260,27 @@ fun Layer.randomize(): Layer {
                 biasInitializer = randomChoice(random, biasInitializer, new.biasInitializer),
                 padding = randomChoice(random, padding, new.padding)
             )
+            randomChoice(random, changed, NeuralAIFactory.randomConvLayer())
         }
 
         is AvgPool2D -> {
             val new = NeuralAIFactory.randomAvg2DLayer() as AvgPool2D
-            AvgPool2D(
+            val changed = AvgPool2D(
                 poolSize = randomChoice(random, poolSize, new.poolSize),
                 strides = randomChoice(random, strides, new.strides),
                 padding = randomChoice(random, padding, new.padding)
             )
+            randomChoice(random, changed, NeuralAIFactory.randomConvLayer())
         }
 
         is MaxPool2D -> {
             val new = NeuralAIFactory.randomMax2DLayer() as MaxPool2D
-            MaxPool2D(
+            val changed = MaxPool2D(
                 poolSize = randomChoice(random, poolSize, new.poolSize),
                 strides = randomChoice(random, strides, new.strides),
                 padding = randomChoice(random, padding, new.padding)
             )
+            randomChoice(random, changed, NeuralAIFactory.randomConvLayer())
         }
 
         else -> throw Exception("unhandled Layer")
@@ -337,7 +298,7 @@ class RandomNeuralAI(
     private val age: Int = 0
 ) : NeuralAI(inputType) {
     private val timeStamp = Instant.now().toEpochMilli()
-    private val inputSingular = inputType
+    val inputSingular = inputType
     val convLayer = conv?.map { it.copy() } ?: NeuralAIFactory.getRandomConvLayers()
     val denseLayer = dense?.map { it.copy() } ?: NeuralAIFactory.getRandomDenseLayers()
     val outputLayer = output?.copy() ?: NeuralAIFactory.getOutputLayer()
@@ -364,12 +325,13 @@ class RandomNeuralAI(
 
     fun copy(
         training: List<Move>,
+        input: Boolean? = null,
         conv: List<Layer>? = convLayer,
         dense: List<Layer>? = denseLayer,
         output: Layer? = outputLayer,
         losses: Losses? = loss,
         metrics: Metrics? = metric
-    ) = RandomNeuralAI(training, inputSingular, conv, dense, output, losses, metrics, age + 1)
+    ) = RandomNeuralAI(training, input ?: inputSingular, conv, dense, output, losses, metrics, age + 1)
 
     init {
         brain.compile(

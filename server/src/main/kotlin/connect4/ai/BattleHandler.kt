@@ -70,4 +70,6 @@ class BattleHandler(players: List<AI>) {
     }
 
     fun highest(): AI = counters.maxBy { it.gamesWon }.ai
+
+    fun highestRanking(amount: Int): List<AI> = counters.sortedByDescending { it.gamesWon }.map { it.ai }.take(amount)
 }
