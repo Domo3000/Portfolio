@@ -11,6 +11,7 @@ import org.jetbrains.kotlinx.dl.api.core.layer.Layer
 import org.jetbrains.kotlinx.dl.api.core.layer.convolutional.Conv2D
 import org.jetbrains.kotlinx.dl.api.core.layer.core.Dense
 import org.jetbrains.kotlinx.dl.api.core.layer.core.Input
+import org.jetbrains.kotlinx.dl.api.core.layer.normalization.BatchNorm
 import org.jetbrains.kotlinx.dl.api.core.layer.pooling.AvgPool2D
 import org.jetbrains.kotlinx.dl.api.core.layer.pooling.MaxPool2D
 import org.jetbrains.kotlinx.dl.api.core.layer.reshaping.Flatten
@@ -94,6 +95,7 @@ fun List<Move>.toDataset(player: Player, inputSingular: Boolean): Dataset = OnHe
 
 fun Layer.name(): String = when (this) {
     is Input -> "Input(${packedDims[2]})"
+    is BatchNorm -> "BatchNorm()"
     is Dense -> "Dense($outputSize/${activation.name})"
     is Conv2D -> "Conv($filters/${kernelSize.contentToString()}/${activation.name})"
     is AvgPool2D -> "Avg2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
@@ -179,5 +181,33 @@ abstract class NeuralAI(
                 AdditionalInfo(inputSingular)
             )
         )
+    }
+}
+
+class OverallHighestAI(private val neurals: List<NeuralAI>) : AI() {
+    override val name: String = "overallHighest: " + neurals.joinToString(",") { it.name }
+
+    override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
+        return neurals.map {
+            it.nextMoveRanked(field, availableColumns, player)
+        }
+            .fold(Array(7) { 0.0f }) { acc, list ->
+                list.forEach {
+                    acc[it.first] += it.second
+                }
+                acc
+            }.mapIndexed { i, r -> i to r }.maxBy { it.second }.first
+    }
+}
+
+class MostCommonAI(private val neurals: List<NeuralAI>) : AI() {
+    override val name: String = "mostCommon: " + neurals.joinToString(",") { it.name }
+
+    override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
+        return neurals.map {
+            it.nextMoveRanked(field, availableColumns, player)
+        }.map { list ->
+            list.maxBy { it.second }.first
+        }.groupingBy { it }.eachCount().maxBy { it.value }.key
     }
 }

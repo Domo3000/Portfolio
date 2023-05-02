@@ -4,12 +4,12 @@ import connect4.ai.AI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import connect4.game.sizeX
+import kotlin.random.Random
 
 data class Counter(val wins: Int, val losses: Int, val finishedGames: Int = 1)
 
 class Node(private val result: Counter?, availableColumns: List<Int>) {
     val children = mutableMapOf<Int, Node?>()
-    var accessed = 0
 
     fun isFinished(): Boolean = (result != null || children.values.all { it?.isFinished() ?: false })
 
@@ -19,6 +19,19 @@ class Node(private val result: Counter?, availableColumns: List<Int>) {
         children.values.sumOf {
             it?.haveFinished() ?: 0
         }
+    }
+
+    fun prune(random: Random) {
+        val pruned = children.map { (k, v) ->
+            if (random.nextBoolean()) {
+                k to null
+            } else {
+                v?.prune(random)
+                k to v
+            }
+        }
+        children.clear()
+        children.putAll(pruned)
     }
 
     fun getResult(): Counter = result
@@ -75,11 +88,9 @@ abstract class MonteCarloAI(private val maxGames: Int) : AI() {
 
     override fun updateMove(move: Int, availableColumns: List<Int>) {
         node.children.getOrDefault(move, null)?.let {
-            it.accessed += 1
             node = it
         } ?: run {
             val new = Node(null, availableColumns)
-            new.accessed += 1
             node.children[move] = new
             node = new
         }
@@ -103,23 +114,24 @@ abstract class MonteCarloAI(private val maxGames: Int) : AI() {
             return it.first
         }
 
-        return result.maxBy { it.second.wins.toDouble() / it.second.losses.toDouble() }.first
+        return decision(result)
     }
 
     abstract fun decision(results: List<Pair<Int, Counter>>): Int
 }
 
-class BalancedMonteCarloAI(max: Int): MonteCarloAI(max) {
-    override fun decision(results: List<Pair<Int, Counter>>): Int = results.maxBy { it.second.wins.toDouble() / it.second.losses.toDouble() }.first
+class BalancedMonteCarloAI(max: Int) : MonteCarloAI(max) {
+    override fun decision(results: List<Pair<Int, Counter>>): Int =
+        results.maxBy { it.second.wins.toDouble() / it.second.losses.toDouble() }.first
 }
 
-class MaximizeWinsMonteCarloAI(max: Int): MonteCarloAI(max) {
+class MaximizeWinsMonteCarloAI(max: Int) : MonteCarloAI(max) {
     override val name = "MaximizeWinsMonteCarloAI($max)"
 
     override fun decision(results: List<Pair<Int, Counter>>): Int = results.maxBy { it.second.wins.toDouble() }.first
 }
 
-class MinimizeLossesMonteCarloAI(max: Int): MonteCarloAI(max) {
+class MinimizeLossesMonteCarloAI(max: Int) : MonteCarloAI(max) {
     override val name = "MinimizeLossesMonteCarloAI($max)"
 
     override fun decision(results: List<Pair<Int, Counter>>): Int = results.minBy { it.second.losses.toDouble() }.first

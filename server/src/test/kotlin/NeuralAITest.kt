@@ -1,12 +1,15 @@
 import connect4.ai.AI
 import connect4.ai.AIs
 import connect4.ai.BattleHandler
+import connect4.ai.length.BalancedLengthAI
 import connect4.ai.length.PlyLengthAI
 import connect4.ai.length.SimpleLengthAI
 import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.neural.*
 import connect4.ai.simple.BiasedRandomAI
+import connect4.ai.simple.RandomAI
 import connect4.game.Player
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.dl.api.core.activation.Activations
 import org.jetbrains.kotlinx.dl.api.core.initializer.Constant
 import org.jetbrains.kotlinx.dl.api.core.initializer.GlorotNormal
@@ -25,6 +28,39 @@ fun List<Int>.repeatLastInts(): List<Int> {
     }
 }
 
+fun combinations(neurals: List<NeuralAI>): List<List<NeuralAI>> {
+    val result = mutableListOf<List<NeuralAI>>()
+
+    // TODO recursive
+    neurals.forEach { initial ->
+        val remaining = neurals.filterNot { it == initial }
+        remaining.forEach { remainder ->
+            val two = listOf(initial, remainder)
+            result += two
+            val remainin = remaining.filterNot { it == remainder }
+            remainin.forEach { remainde ->
+                val three = two + remainde
+                result += three
+            }
+        }
+    }
+
+    return result.map { l -> l.sortedBy { it.name } }.toSet().toList()
+}
+
+object CombinationCreator {
+    fun fromNeurals(neurals: List<NeuralAI>): List<AI> {
+        val combined = combinations(neurals).map { l -> l.sortedBy { it.name } }.toSet().toList()
+
+        return neurals + combined.map {
+            listOf(
+                MostCommonAI(it), OverallHighestAI(it)
+            )
+        }.flatten()
+    }
+}
+
+// TODO cleanup
 class NeuralAITest {
     @Test
     fun repeatLast() {
@@ -34,7 +70,7 @@ class NeuralAITest {
 
     @Test
     fun testNormalizeMoves() {
-        val moves = getTrainingMoves(AIs.highAIs.map { it() })
+        val moves = getTrainingMoves(AIs.highAIs)
 
         val firstPlayerFloatArray = moves.map { move ->
             move.field.toFloatArraySingular(Player.FirstPlayer)
@@ -111,7 +147,7 @@ class NeuralAITest {
             metrics = Metrics.ACCURACY
         )
 
-        val moves = getTrainingMoves(listOf(BiasedRandomAI(), SimpleLengthAI(), PlyLengthAI()))
+        val moves = getTrainingMoves(listOf(BiasedRandomAI(), SimpleLengthAI(), PlyLengthAI()).map { { it } })
 
         ai.store("t1")
 
@@ -197,101 +233,246 @@ class NeuralAITest {
     }
 
     @Test
-    fun neuralPrefixedStrengthTest() {
+    fun neuralCombinationStrengthTest() {
         val handler = StoredHandler()
-        handler.loadStored(emptyList(), "c", silent = true)
+        handler.loadStored()
+
+        val allCombinations = CombinationCreator.fromNeurals(handler.allNeurals())
+        println(allCombinations.size)
+
+        val battleHandler = BattleHandler(CombinationCreator.fromNeurals(handler.allNeurals()))
+
+        val allHighest = mutableListOf<AI>()
+
+        println("neurals")
+        battleHandler.battle(handler.allNeurals())
+        battleHandler.currentScore()
+        println("highest:")
+        println(battleHandler.highest().name)
+        battleHandler.highestRanking(5).forEach { allHighest += it }
+        battleHandler.resetBattles()
 
         val toEvaluate = listOf(
-            "neural" to handler.allNeurals(),
-            "simpleLength" to listOf(SimpleLengthAI()),
-            "plyLength" to listOf(PlyLengthAI())
+            "biasedRandom" to BiasedRandomAI(),
+            "simpleLength" to SimpleLengthAI(),
+            "balancedLength" to BalancedLengthAI(),
+            "plyLength" to PlyLengthAI()
         )
 
-        val battleHandler = BattleHandler(handler.allNeurals())
-
-        toEvaluate.forEach { (aiName, ais) ->
+        toEvaluate.forEach { (aiName, ai) ->
             println(aiName)
             repeat(20) {
-                battleHandler.battle(ais)
+                battleHandler.battle(listOf(ai))
             }
-            println(battleHandler.highest().name)
+            battleHandler.currentScore(false, true)
+            battleHandler.highestRanking(5).forEach { allHighest += it }
             battleHandler.resetBattles()
         }
 
         val toEvaluate2 = listOf(
-            "monte500" to listOf(BalancedMonteCarloAI(500)),
-            "monte1000" to listOf(BalancedMonteCarloAI(1000)),
+            "monte500" to BalancedMonteCarloAI(500),
+            "monte1000" to BalancedMonteCarloAI(1000),
         )
 
-        toEvaluate2.forEach { (aiName, ais) ->
+        val battleHandler2 = BattleHandler(handler.allNeurals() + allHighest.toSet().toList())
+
+        toEvaluate2.forEach { (aiName, ai) ->
             println(aiName)
             repeat(10) {
                 println(it)
-                battleHandler.battle(ais)
+                battleHandler2.battle(listOf(ai))
             }
-            println(battleHandler.highest().name)
-            battleHandler.resetBattles()
+            battleHandler2.currentScore()
+            battleHandler2.resetBattles()
         }
     }
 
     @Test
-    fun neuralFilteredStrengthTest() {
-        val allHighest = mutableListOf<AI>()
+    fun neuralChunkedStrengthTest() {
+        val coarseHighest = mutableSetOf<AI>()
 
-        //loads prefix0 to prefix199 in chunks of 20
-        (0..9).forEach { add ->
-            val toLoad = (0..19).map { index ->
-                index + (20 * add)
-            }.map { "sm$it" }
+        val handler = StoredHandler()
+        handler.loadStored(prefix = "pref")
 
-            val handler = StoredHandler()
-            handler.loadStored(toLoad, silent = true)
+        val chunks = handler.allNeurals().shuffled().chunked(10)
 
-            val toEvaluate = listOf(
-                "neural" to handler.allNeurals(),
-                "simpleLength" to listOf(SimpleLengthAI()),
-                "plyLength" to listOf(PlyLengthAI()),
-            )
+        runBlocking {
+            chunks.map { neurals ->
+                CoroutineScope(Dispatchers.Default).async {
+                    val toEvaluate = listOf(
+                        Triple("neural", handler.allNeurals(), 1),
+                        Triple("simpleLength", listOf(SimpleLengthAI()), 100),
+                        Triple("plyLength", listOf(PlyLengthAI()), 100),
+                        Triple("monte300", listOf(BalancedMonteCarloAI(300)), 20),
+                        Triple("monte500", listOf(BalancedMonteCarloAI(500)), 15)
+                    )
 
-            val battleHandler = BattleHandler(handler.allNeurals())
+                    val battleHandler = BattleHandler(neurals)
 
-            toEvaluate.forEach { (aiName, ais) ->
-                repeat(20) {
-                    battleHandler.battle(ais)
+                    toEvaluate.forEach { (aiName, ais, repeat) ->
+                        repeat(repeat) {
+                            battleHandler.battle(ais)
+                        }
+                        println("$aiName: ${battleHandler.highest().name}")
+                        coarseHighest += battleHandler.highest()
+                        battleHandler.resetBattles()
+                    }
                 }
-                println("$aiName: ${battleHandler.highest().name}")
-                allHighest += battleHandler.highest()
-                battleHandler.resetBattles()
-            }
+            }.awaitAll()
         }
 
         println("----")
         println("----")
         println("----")
 
-        val toEvaluate = listOf(
-            "neural" to allHighest,
-            "simpleLength" to listOf(SimpleLengthAI()),
-            "plyLength" to listOf(PlyLengthAI()),
-            "monte500" to listOf(BalancedMonteCarloAI(500))
-        )
+        val fineHighest = mutableSetOf<AI>()
 
-        val battleHandler = BattleHandler(allHighest)
+        runBlocking {
+            coarseHighest.chunked(5).map { neurals ->
+                CoroutineScope(Dispatchers.Default).async {
+                    val toEvaluate = listOf(
+                        Triple("neural", coarseHighest.toList(), 1),
+                        Triple("simpleLength", listOf(SimpleLengthAI()), 100),
+                        Triple("plyLength", listOf(PlyLengthAI()), 100),
+                        Triple("monte500", listOf(BalancedMonteCarloAI(500)), 20)
+                    )
+
+                    val battleHandler = BattleHandler(neurals)
+
+                    toEvaluate.forEach { (aiName, ais, repeat) ->
+                        repeat(repeat) {
+                            battleHandler.battle(ais)
+                        }
+                        println("$aiName: ${battleHandler.highest().name}")
+                        fineHighest += battleHandler.highest()
+                        battleHandler.resetBattles()
+                    }
+                }
+            }.awaitAll()
+        }
+
+        println("----")
+        println("----")
+        println("----")
+
+        fineHighest.forEach {
+            println((it as NeuralAI).info())
+        }
+
+        println("----")
+        println("----")
+        println("----")
+
+        val battleHandler = BattleHandler(fineHighest.toList())
+
+        println("allNeurals")
+        battleHandler.battle(handler.allNeurals())
+        battleHandler.currentScore()
+        battleHandler.resetBattles()
+
+        val toEvaluate = listOf(
+            "simpleLength" to listOf(SimpleLengthAI()),
+            "balancedLength" to listOf(BalancedLengthAI()),
+            "plyLength" to listOf(PlyLengthAI())
+        )
 
         toEvaluate.forEach { (aiName, ais) ->
             println(aiName)
-            repeat(20) {
+            repeat(500) {
                 battleHandler.battle(ais)
             }
-            println(battleHandler.highest().name)
+            battleHandler.currentScore()
             battleHandler.resetBattles()
         }
 
-        println("monte1000")
-        repeat(10) {
-            println(it)
-            battleHandler.battle(listOf(BalancedMonteCarloAI(1000)))
+        println("500")
+        runBlocking {
+            (0..9).map {
+                CoroutineScope(Dispatchers.Default).async {
+                    battleHandler.battle(listOf(BalancedMonteCarloAI(500)))
+                    println(".")
+                    battleHandler.battle(listOf(BalancedMonteCarloAI(500)))
+                    println(".")
+                    battleHandler.battle(listOf(BalancedMonteCarloAI(500)))
+                    println(".")
+                    battleHandler.battle(listOf(BalancedMonteCarloAI(500)))
+                }
+            }.awaitAll()
         }
-        println(battleHandler.highest().name)
+        battleHandler.currentScore()
+        battleHandler.resetBattles()
+
+        println("1000")
+        runBlocking {
+            (0..9).map {
+                CoroutineScope(Dispatchers.Default).async {
+                    battleHandler.battle(listOf(BalancedMonteCarloAI(1000)))
+                    println(".")
+                    battleHandler.battle(listOf(BalancedMonteCarloAI(1000)))
+                }
+            }.awaitAll()
+        }
+        battleHandler.currentScore()
+    }
+
+    @Test
+    fun neuralChunkedAllStrengthTest() {
+        val handler = StoredHandler()
+        handler.loadStored()
+
+        val allCombinations = CombinationCreator.fromNeurals(handler.allNeurals())
+        println(allCombinations.size)
+
+        val chunks = allCombinations.shuffled().chunked(10)
+
+        val scores: Map<String, MutableMap<AI, Int>> =
+            listOf(
+                "randomAI",
+                "simpleLength",
+                "balancedLength",
+                "plyLength",
+                "monte1000"
+            ).associateWith { mutableMapOf() }
+
+        chunks.map { neurals ->
+            runBlocking {
+                neurals.map { neural ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        val toEvaluate = listOf(
+                            Triple("randomAI", listOf(RandomAI()), 500),
+                            Triple("simpleLength", listOf(SimpleLengthAI()), 500),
+                            Triple("balancedLength", listOf(BalancedLengthAI()), 500),
+                            Triple("plyLength", listOf(PlyLengthAI()), 500),
+                            Triple("monte1000", listOf(BalancedMonteCarloAI(1000)), 10)
+                        )
+
+                        val battleHandler = BattleHandler(listOf(neural))
+
+                        toEvaluate.forEach { (aiName, ais, repeat) ->
+                            repeat(repeat) {
+                                battleHandler.battle(ais)
+                            }
+                            val score = battleHandler.counters.first()
+                            scores[aiName]!![neural] = score.gamesWon
+                            battleHandler.resetBattles()
+                        }
+                        println(".")
+                    }
+                }.awaitAll()
+            }
+        }
+
+        println("-----")
+        println()
+
+        scores.toList().map { it.first to it.second.toList() }.forEach { (aiName, score) ->
+            println("------")
+            println(aiName)
+            score.sortedByDescending { it.second }.forEach { (neural, gamesWon) ->
+                println("${neural.name}: $gamesWon")
+            }
+            println("------")
+            println()
+        }
     }
 }

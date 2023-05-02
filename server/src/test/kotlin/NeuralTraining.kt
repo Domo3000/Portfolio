@@ -1,12 +1,18 @@
 import connect4.ai.AI
+import connect4.ai.BattleHandler
 import connect4.ai.length.*
 import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.monte.MaximizeWinsMonteCarloAI
 import connect4.ai.monte.MinimizeLossesMonteCarloAI
-import connect4.ai.neural.EvolutionHandler
-import connect4.ai.neural.NeuralCounter
-import connect4.ai.neural.PredefinedNeurals
-import connect4.ai.neural.getTrainingMoves
+import connect4.ai.neural.*
+import connect4.ai.simple.BiasedRandomAI
+import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.dl.api.core.activation.Activations
+import org.jetbrains.kotlinx.dl.api.core.initializer.Constant
+import org.jetbrains.kotlinx.dl.api.core.initializer.GlorotNormal
+import org.jetbrains.kotlinx.dl.api.core.initializer.RandomNormal
+import org.jetbrains.kotlinx.dl.api.core.loss.Losses
+import org.jetbrains.kotlinx.dl.api.core.metric.Metrics
 import org.junit.Test
 
 /*
@@ -19,51 +25,223 @@ import org.junit.Test
  */
 class NeuralTraining {
     private val trainingPlayers = listOf(
-        BalancedLengthAI(),
-        PlyLengthAI(),
-        SimpleLengthAI(),
-        AggressiveLengthAI(),
-        DefensiveLengthAI(),
-        MinimizeLossesMonteCarloAI(500),
-        MaximizeWinsMonteCarloAI(500),
-        BalancedMonteCarloAI(800)
+        { PlyLengthAI() },
+        { PlyLengthAI() },
+        { SimpleLengthAI() },
+        { BalancedLengthAI() },
+        { MinimizeLossesMonteCarloAI(500) },
+        { MaximizeWinsMonteCarloAI(500) },
+        { BalancedMonteCarloAI(800) }
     )
 
     private fun evaluateAndTrain(
         prefix: String,
         handler: EvolutionHandler,
-        newTrainingPlayers: () -> List<AI>,
+        newTrainingPlayers: List<() -> AI>,
         evaluate: (List<NeuralCounter>) -> Unit
     ) {
-        val initialMoves = getTrainingMoves(trainingPlayers)
-        handler.initPredefinedNeurals("basic") { random -> PredefinedNeurals.basic(initialMoves, random) }
-        handler.initPredefinedNeurals("complex") { random -> PredefinedNeurals.complex(initialMoves, random) }
-        handler.initWithRandom(10, initialMoves)
+        println("start")
+
+        //handler.initPredefinedNeurals("basic") { random -> PredefinedNeurals.basic(initialMoves, random) }
+        //handler.initPredefinedNeurals("complex") { random -> PredefinedNeurals.complex(initialMoves, random) }
+        //handler.initWithRandom(30, initialMoves + initialMoves)
+
+        handler.initPredefinedNeurals("predefined") { random ->
+            listOf(
+                RandomNeuralAI(
+                    training = emptyList(),
+                    inputType = false,
+                    batchNorm = true,
+                    conv = (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            64,
+                            4,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    },
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            300,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = emptyList(),
+                    inputType = false,
+                    batchNorm = true,
+                    conv = (0..1).map {
+                        NeuralAIFactory.conv2D(
+                            64,
+                            4,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    },
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            300,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        ),
+                        NeuralAIFactory.dense(
+                            120,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = emptyList(),
+                    inputType = false,
+                    batchNorm = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            64,
+                            4,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            300,
+                            Activations.LiSHT,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+                RandomNeuralAI(
+                    training = emptyList(),
+                    inputType = false,
+                    batchNorm = false,
+                    conv = listOf(
+                        NeuralAIFactory.conv2D(
+                            64,
+                            4,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        ),
+                        NeuralAIFactory.conv2D(
+                            64,
+                            3,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    ),
+                    dense = listOf(
+                        NeuralAIFactory.dense(
+                            300,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        ),
+                        NeuralAIFactory.dense(
+                            120,
+                            Activations.Mish,
+                            GlorotNormal(random.nextLong()),
+                            RandomNormal(0.0f, 0.2f)
+                        )
+                    ),
+                    output = NeuralAIFactory.dense(
+                        7,
+                        Activations.Linear,
+                        GlorotNormal(random.nextLong()),
+                        Constant(0.5f)
+                    ),
+                    losses = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
+                    metrics = Metrics.ACCURACY
+                ),
+            )
+        }
+
+        println("gettingTrainingMoves")
+
+        val initialMoves = runBlocking {
+            (0..10).map {
+                CoroutineScope(Dispatchers.Default).async {
+                    getTrainingMoves(trainingPlayers)
+                }
+            }.awaitAll()
+        }.flatten()
+
+        println("gotTrainingMoves: ${initialMoves.size}")
+        println("start initial training")
+        handler.train(handler.allNeurals(), initialMoves)
+        println("initial training done")
 
         var c = 0
 
         repeat(100) { i ->
             println("outerLoop $i")
             evaluate(handler.allNeurals())
-            handler.currentScore(false, true)
-            handler.purge()
+            handler.currentScore(true, true)
+            handler.purge(15)
 
-            val newMoves = getTrainingMoves(newTrainingPlayers())
-
-            handler.highestRanking(1).forEach { counter ->
-                handler.evolve(counter.ai, newMoves)
-            }
-
-            handler.highestRanking(2).forEach { counter ->
+            handler.highestRanking(3).forEach { counter ->
                 println("highestRanking: $prefix${c} = ${counter.ai.info()}")
                 counter.ai.store("$prefix${c++}")
             }
 
-            handler.initWithRandom(2, newMoves)
+            val newMoves = runBlocking {
+                (0..10).map {
+                    CoroutineScope(Dispatchers.Default).async {
+                        getTrainingMoves(newTrainingPlayers)
+                    }
+                }.awaitAll()
+            }.flatten()
 
-            handler.resetBattles()
+            println("softEvolve")
+            handler.highestRanking(1).forEach { counter ->
+                handler.softEvolve(counter.ai, newMoves)
+            }
+
             println("start training")
             handler.train(handler.allNeurals(), newMoves)
+
+            handler.resetBattles()
         }
     }
 
@@ -71,22 +249,36 @@ class NeuralTraining {
     @Test
     fun battleEvolve() {
         val handler = EvolutionHandler()
+        var strongest: Pair<StoredNeuralAI?, Int> = null to 0
 
-        // TODO start out with weaker players and get stronger as Neurals do?
         val battlePlayers = listOf(
-            { BalancedLengthAI() },
-            { SimpleLengthAI() },
-            { DefensiveLengthAI() },
-            { AggressiveLengthAI() },
-            { PlyLengthAI() },
-            { BalancedMonteCarloAI(500) }
+            Triple({ BiasedRandomAI() }, 1, 10),
+            Triple({ DumbLengthAI() }, 1, 20),
+            Triple({ BalancedLengthAI() }, 3, 100),
+            Triple({ SimpleLengthAI() }, 3, 100),
+            Triple({ PlyLengthAI() }, 6, 100),
+            Triple({ BalancedMonteCarloAI(500) }, 50, 10)
         )
 
-        evaluateAndTrain("b", handler, { trainingPlayers }) { allNeurals ->
-            repeat(10) { j ->
-                println(j)
-                repeat(allNeurals.size) {
-                    handler.battle(battlePlayers)
+        println("start")
+
+        evaluateAndTrain(
+            "b", handler,
+            (trainingPlayers + strongest.first?.let { { it } }).filterNotNull()
+        ) { allNeurals ->
+            runBlocking {
+                allNeurals.map {
+                    CoroutineScope(Dispatchers.Default).async {
+                        handler.battleScored(battlePlayers, it)
+                    }
+                }.awaitAll()
+            }
+            handler.highestRanking(1).forEach { counter ->
+                if (counter.gamesWon > strongest.second && counter.gamesWon > 800) {
+                    (counter.ai as NeuralAI).store("strngst")
+                    val storedHandler = StoredHandler()
+                    storedHandler.loadStored(listOf("strngst"))
+                    strongest = storedHandler.allNeurals().first() to counter.gamesWon
                 }
             }
         }
@@ -99,14 +291,15 @@ class NeuralTraining {
         val handler = EvolutionHandler()
 
         val evaluationPlayers = listOf(
-            PlyLengthAI(),
-            SimpleLengthAI(),
-            AggressiveLengthAI(),
-            DefensiveLengthAI(),
-            BalancedMonteCarloAI(500)
+            { PlyLengthAI() },
+            { SimpleLengthAI() },
+            { AggressiveLengthAI() },
+            { DefensiveLengthAI() },
+            { BalancedMonteCarloAI(500) }
         )
 
-        evaluateAndTrain("e", handler, { trainingPlayers }) { allNeurals ->
+        evaluateAndTrain("e", handler, trainingPlayers)
+        { allNeurals ->
             val evalMoves = getTrainingMoves(evaluationPlayers)
 
             allNeurals.map { counter ->
@@ -129,7 +322,7 @@ class NeuralTraining {
     fun challengeEvolve() {
         val handler = EvolutionHandler()
 
-        evaluateAndTrain("c", handler, { trainingPlayers }) { allNeurals ->
+        evaluateAndTrain("c", handler, trainingPlayers) { allNeurals ->
             allNeurals.forEach { neuralCounter ->
                 val ai = neuralCounter.ai
                 var aiScore = 0
@@ -152,11 +345,13 @@ class NeuralTraining {
     fun playAgainstSelfEvolve() {
         val handler = EvolutionHandler()
 
-        evaluateAndTrain("s", handler, {
-            handler.highestRanking(7).map { it.ai }
-        }) { allNeurals -> // fighting 10 times not needed, as they'll always do the same
-            allNeurals.forEach { counter ->
-                handler.battle(allNeurals.map { { it.ai } }, counter)
+        evaluateAndTrain("s", handler, handler.highestRanking(7).map { { it.ai } }) { allNeurals ->
+            runBlocking {
+                allNeurals.map { counter ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        handler.battle(allNeurals.map { { it.ai } }, counter)
+                    }
+                }.awaitAll()
             }
         }
     }
@@ -165,17 +360,44 @@ class NeuralTraining {
     @Test
     fun playAgainstSelfMixedEvolve() {
         val handler = EvolutionHandler()
+        var strongest: StoredNeuralAI? = null
 
-        val trainingPlayers: List<AI> = listOf(
-            BalancedLengthAI(),
-            PlyLengthAI()
-        )
+        evaluateAndTrain("sm", handler, (handler.highestRanking(4)
+            .map { it.ai } + PlyLengthAI() + BalancedMonteCarloAI(800) + strongest).filterNotNull()
+            .map { { it } }) { allNeurals ->
 
-        evaluateAndTrain("m", handler, {
-            trainingPlayers + handler.highestRanking(5).map { it.ai }
-        }) { allNeurals ->
-            allNeurals.forEach { counter ->
-                handler.battle(allNeurals.map { { it.ai } }, counter)
+            runBlocking {
+                allNeurals.map { counter ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        handler.battle(allNeurals.map { { it.ai } }, counter)
+                    }
+                }.awaitAll()
+            }
+            handler.highestRanking(1).forEach { counter ->
+                val maybeNewStrongest = strongest?.let { strongest ->
+                    val battleHandler = BattleHandler(listOf(strongest, counter.ai))
+                    battleHandler.battle(
+                        listOf(
+                            SimpleLengthAI(),
+                            DefensiveLengthAI(),
+                            AggressiveLengthAI(),
+                            BalancedMonteCarloAI(300),
+                            BalancedMonteCarloAI(400),
+                            BalancedMonteCarloAI(500)
+                        )
+                    )
+                    battleHandler.currentScore(true, false)
+                    battleHandler.highestRanking(1).first()
+                } ?: run {
+                    counter.ai
+                }
+
+                if (maybeNewStrongest != strongest) {
+                    (maybeNewStrongest as NeuralAI).store("strongest")
+                    val storedHandler = StoredHandler()
+                    storedHandler.loadStored(listOf("strongest"))
+                    strongest = storedHandler.allNeurals().first()
+                }
             }
         }
     }

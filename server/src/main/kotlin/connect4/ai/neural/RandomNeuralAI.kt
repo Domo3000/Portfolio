@@ -11,6 +11,7 @@ import org.jetbrains.kotlinx.dl.api.core.layer.convolutional.Conv2D
 import org.jetbrains.kotlinx.dl.api.core.layer.convolutional.ConvPadding
 import org.jetbrains.kotlinx.dl.api.core.layer.core.Dense
 import org.jetbrains.kotlinx.dl.api.core.layer.core.Input
+import org.jetbrains.kotlinx.dl.api.core.layer.normalization.BatchNorm
 import org.jetbrains.kotlinx.dl.api.core.layer.pooling.AvgPool2D
 import org.jetbrains.kotlinx.dl.api.core.layer.pooling.MaxPool2D
 import org.jetbrains.kotlinx.dl.api.core.layer.reshaping.Flatten
@@ -170,14 +171,21 @@ object NeuralAIFactory {
         return max2D(size, strides, padding)
     }
 
-    fun randomConvLayer(): Layer = when (random.nextInt(0, 3)) {
-        0 -> randomConv2DLayer()
-        1 -> randomAvg2DLayer()
-        2 -> randomMax2DLayer()
-        else -> throw Exception("illegal random")
+    fun randomConvLayer(): Layer = when (random.nextInt(0, 4)) {
+        0 -> randomAvg2DLayer()
+        1 -> randomMax2DLayer()
+        else -> randomConv2DLayer() // twice as likely
     }
 
-    fun getRandomConvLayers(): List<Layer> = (0..(random.nextInt(0, 3))).map { randomConvLayer() }
+    fun getRandomConvLayers(batchNorm: Boolean): List<Layer> {
+        val convLayers = (0..(random.nextInt(0, 3))).map { randomConvLayer() }
+
+        return if(batchNorm) {
+            convLayers.map { listOf(it, BatchNorm()) }.flatten()
+        } else {
+            convLayers
+        }
+    }
 
     fun dense(size: Int, activation: Activations, initializer: Initializer, biasInitializer: Initializer) =
         Dense(
@@ -233,6 +241,36 @@ fun Layer.copy(): Layer = when (this) {
     )
 
     else -> throw Exception("unhandled Layer")
+}
+
+fun Layer.softRandomize(): Layer {
+    val random = Random(Instant.now().toEpochMilli())
+
+    return when (this) {
+        is Dense -> {
+            val new = NeuralAIFactory.randomDenseLayer() as Dense
+            Dense(
+                outputSize = random.nextInt(outputSize - 25, outputSize + 25),
+                activation = new.activation,
+                kernelInitializer = new.kernelInitializer,
+                biasInitializer = new.biasInitializer
+            )
+        }
+
+        is Conv2D -> {
+            val new = NeuralAIFactory.randomConv2DLayer() as Conv2D
+            Conv2D(
+                filters = random.nextInt(filters - 5, filters + 5),
+                kernelSize = kernelSize,
+                strides = strides,
+                activation = new.activation,
+                kernelInitializer = new.kernelInitializer,
+                biasInitializer = new.biasInitializer,
+                padding = padding
+            )
+        }
+        else -> this
+    }
 }
 
 fun Layer.randomize(): Layer {
@@ -295,11 +333,19 @@ class RandomNeuralAI(
     output: Layer? = null,
     losses: Losses? = null,
     metrics: Metrics? = null,
-    private val age: Int = 0
-) : NeuralAI(inputType) {
+    private val age: Int = 0,
+    batchNorm: Boolean? = null
+    ) : NeuralAI(inputType) {
     private val timeStamp = Instant.now().toEpochMilli()
     val inputSingular = inputType
-    val convLayer = conv?.map { it.copy() } ?: NeuralAIFactory.getRandomConvLayers()
+    val convLayer = conv?.map {
+        val c = it.copy()
+        if(batchNorm == true) {
+            listOf(c, BatchNorm())
+        } else {
+            listOf(c)
+        }
+    }?.flatten() ?: NeuralAIFactory.getRandomConvLayers(batchNorm ?: false)
     val denseLayer = dense?.map { it.copy() } ?: NeuralAIFactory.getRandomDenseLayers()
     val outputLayer = output?.copy() ?: NeuralAIFactory.getOutputLayer()
     val loss = losses ?: NeuralAIFactory.randomLosses()

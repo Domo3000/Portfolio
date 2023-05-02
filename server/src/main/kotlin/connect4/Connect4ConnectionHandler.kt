@@ -1,8 +1,7 @@
 package connect4
 
-import connect4.messages.*
+import connect4.messages.Connect4Message
 import io.ktor.websocket.*
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import sockets.Connection

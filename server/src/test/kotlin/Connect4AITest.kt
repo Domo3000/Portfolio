@@ -4,10 +4,12 @@ import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.monte.MaximizeWinsMonteCarloAI
 import connect4.ai.monte.MinimizeLossesMonteCarloAI
 import connect4.ai.neural.NeuralAI
+import connect4.ai.neural.StoredHandler
 import connect4.ai.simple.BiasedRandomAI
 import connect4.ai.simple.RandomAI
 import connect4.game.Connect4Game
 import connect4.game.Player
+import kotlinx.coroutines.*
 import org.junit.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -57,7 +59,21 @@ class Connect4AITest {
     }
 
     @Test
-    fun battleLengthTest() {
+    fun battleLengthTestLength() {
+        println(measureTime {
+            battle(
+                100,
+                listOf(
+                    SimpleLengthAI(),
+                    PlyLengthAI()
+                ),
+                false
+            )
+        })
+    }
+
+    @Test
+    fun battleLengthTestMonte() {
         println(measureTime {
             battle(
                 1,
@@ -68,76 +84,114 @@ class Connect4AITest {
                 true
             )
         })
-        println(measureTime {
-            battle(
-                1,
-                listOf(
-                    BalancedMonteCarloAI(500),
-                    MaximizeWinsMonteCarloAI(501),
-                    MinimizeLossesMonteCarloAI(502),
-                    DumbLengthAI(),
-                    SimpleLengthAI(),
-                    PlyLengthAI()
-                ),
-                true
-            )
-        })
+    }
+
+    private fun evaluateSingle(ai: AI): Int {
+        var winning = true
+        var strength = 50
+
+        while (winning) {
+            val p1Result = Connect4Game.runGame(ai, BalancedMonteCarloAI(strength))
+            val p2Result = Connect4Game.runGame(BalancedMonteCarloAI(strength), ai)
+
+            if (p1Result.first != Player.FirstPlayer && p2Result.first != Player.SecondPlayer) {
+                winning = false
+            }
+            strength += 50
+        }
+
+        return strength
     }
 
     //  rough estimation of relative AI strength
-    //      RandomAI: 115.0
-    //      BiasedRandomAI: 115.0
-    //      DumbLengthAI: 135.0
-    //      AggressiveLengthAI: 175.0
-    //      MaximizeWinsMonteCarloAI(100): 195.0
-    //      MinimizeLossesMonteCarloAI(100): 235.0
-    //      DefensiveLengthAI: 230.0
-    //      SimpleLengthAI: 360.0
-    //      MaximizeWinsMonteCarloAI(300): 375.0
-    //      MinimizeLossesMonteCarloAI(500): 385.0
-    //      MinimizeLossesMonteCarloAI(300): 410.0
-    //      MaximizeWinsMonteCarloAI(500): 445.0
-    //      PlyLengthAI: 610.0
-    //      MinimizeLossesMonteCarloAI(800): 630.0
-    //      MaximizeWinsMonteCarloAI(800): 660.0
-    @Test
-    fun relativeAiStrength() {
-        //val storedHandler = StoredHandler()
-        //storedHandler.loadStored(emptyList(), "s")
-        //val aiScores = storedHandler.allNeurals().map { it to mutableListOf<Int>() }
+    private fun evaluateRelativeAiStrength(ais: List<AI>, repeat: Int = 10) {
+        val aiScores = ais.map { it to mutableListOf<Int>() }
 
-        val aiScores = listOf(
-            RandomAI(),
-            BiasedRandomAI(),
-            DumbLengthAI(),
-            AggressiveLengthAI(),
-            DefensiveLengthAI(),
-            SimpleLengthAI(),
-            PlyLengthAI()
-        ).map { it to mutableListOf<Int>() }
-
-        repeat(10) { round ->
+        repeat(repeat) { round ->
             println(round)
-            aiScores.forEach { (ai, scores) ->
-                var winning = true
-                var strength = 50
-
-                while (winning) {
-                    val monteCarloAI = BalancedMonteCarloAI(strength)
-                    val p1Result = Connect4Game.runGame(ai, monteCarloAI)
-                    val p2Result = Connect4Game.runGame(monteCarloAI, ai)
-
-                    if (p1Result.first != Player.FirstPlayer && p2Result.first != Player.SecondPlayer) {
-                        winning = false
+            runBlocking {
+                aiScores.map { (ai, scores) ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        scores += evaluateSingle(ai)
                     }
-                    strength += 50
-                }
-                scores += strength
+                }.awaitAll()
             }
         }
 
-        aiScores.map { (ai, scores) -> ai to scores.average() }.forEach { (ai, score) ->
+        aiScores.map { (ai, scores) -> ai to scores.average() }.sortedBy { it.second }.forEach { (ai, score) ->
             println("${ai.name}: $score")
+        }
+    }
+
+    private fun evaluateRelativeAiStrength(ai: () -> AI, repeat: Int = 15): Int {
+        val aiScore = mutableListOf<Int>()
+
+        runBlocking {
+            (0 until repeat).map { round ->
+                CoroutineScope(Dispatchers.Default).async {
+                    val score = evaluateSingle(ai())
+                    aiScore += score
+                }
+            }.awaitAll()
+        }
+
+        val result = aiScore.average()
+        return result.toInt()
+    }
+
+    //      RandomAI: 125.0
+    //      BiasedRandomAI: 145.0
+    //      DumbLengthAI: 145.0
+    //      DefensiveLengthAI: 170.0
+    //      AggressiveLengthAI: 210.0
+    //      MaximizeWinsMonteCarloAI(300): 210.0
+    //      DefensiveLengthAI: 230.0
+    //      MinimizeLossesMonteCarloAI(300): 280.0
+    //      MonteCarlo(300): 295.0 - 385.0
+    //      BalancedLengthAI: 315.0
+    //      SimpleLengthAI: 320.0
+    //      PlyLengthAI: 695.0
+    //      MonteCarlo(800): 550.0 - 660.0 (should be higher?)
+    @Test
+    fun relativeAiStrength() {
+        val ais = listOf(
+            RandomAI(),
+            BiasedRandomAI(),
+            DumbLengthAI(),
+            DefensiveLengthAI(),
+            AggressiveLengthAI(),
+            SimpleLengthAI(),
+            BalancedLengthAI(),
+            PlyLengthAI(),
+            MaximizeWinsMonteCarloAI(300),
+            MinimizeLossesMonteCarloAI(300),
+            BalancedMonteCarloAI(300),
+            BalancedMonteCarloAI(800)
+        )
+
+        ais.map { ai ->
+            val result = evaluateRelativeAiStrength({ ai })
+            ai to result
+        }.sortedBy { it.second }.forEach {
+            println("${it.first.name}: ${it.second}")
+        }
+    }
+
+    @Test
+    fun relativeNeuralAiStrength() {
+        val storedHandler = StoredHandler()
+        storedHandler.loadStored(silent = true)
+
+        val allCombinations = CombinationCreator.fromNeurals(storedHandler.allNeurals())
+        println(allCombinations.size)
+
+        allCombinations.shuffled().mapIndexed { i, ai ->
+            println(i)
+            val result = evaluateRelativeAiStrength({ ai })
+            println("${ai.name}: $result")
+            ai to result
+        }.sortedBy { it.second }.forEach {
+            println("${it.first.name}: ${it.second}")
         }
     }
 }

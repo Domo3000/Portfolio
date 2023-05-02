@@ -198,7 +198,7 @@ class NeuralAiEvaluator {
     @Test
     fun neuralChallenge() {
         val handler = StoredHandler()
-        handler.loadStored(emptyList())
+        handler.loadStored(silent = false)
 
         var max: Pair<Int, StoredNeuralAI>? = null
 

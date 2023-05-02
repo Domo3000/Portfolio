@@ -4,6 +4,7 @@ import connect4.ai.AI
 import connect4.ai.AIs
 import connect4.game.Connect4Game
 import connect4.game.Player
+import kotlinx.coroutines.*
 import java.time.Instant
 import kotlin.random.Random
 
@@ -15,12 +16,10 @@ fun List<Move>.repeatLastMoves(): List<Move> {
     }
 }
 
-fun getTrainingMoves(players: List<AI>): List<Move> {
+fun getTrainingMoves(players: List<() -> AI>): List<Move> {
     val winningMoves = players.map { p1 ->
         players.mapNotNull { p2 ->
-            p1.reset()
-            p2.reset()
-            val result = Connect4Game.runGame(p1, p2)
+            val result = Connect4Game.runGame(p1(), p2())
             if (result.first != null) {
                 result.second to result.first
             } else {
@@ -92,32 +91,32 @@ class EvolutionHandler {
             counter.ai.train(trainingMoves)
             counter.trained++
         } else {
-            toTrain.forEach { counter ->
-                if (counter.ai.train(trainingMoves)) {
-                    counter.trained++
-                } else {
-                    neurals -= counter
-                }
+            runBlocking {
+                toTrain.map { counter ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        if (counter.ai.train(trainingMoves)) {
+                            counter.trained++
+                        } else {
+                            neurals -= counter
+                        }
+                    }
+                }.awaitAll()
             }
         }
     }
 
-    private fun handleResult(counter: NeuralCounter, player: Player, winner: Player?) {
+    private fun handleResult(counter: NeuralCounter, player: Player, winner: Player?, score: Int) {
         counter.gamesPlayed++
         if (player == winner) {
-            counter.gamesWon++
+            counter.gamesWon += score
         }
     }
 
-    private fun singleBattle(counter: NeuralCounter, opponent: AI, handleResult: Boolean) {
+    private fun singleBattle(counter: NeuralCounter, opponent: AI, score: Int = 1) {
         val resultP1 = Connect4Game.runGame(counter.ai, opponent)
-        if (handleResult) {
-            handleResult(counter, Player.FirstPlayer, resultP1.first)
-        }
+        handleResult(counter, Player.FirstPlayer, resultP1.first, score)
         val resultP2 = Connect4Game.runGame(opponent, counter.ai)
-        if (handleResult) {
-            handleResult(counter, Player.SecondPlayer, resultP2.first)
-        }
+        handleResult(counter, Player.SecondPlayer, resultP2.first, score)
     }
 
     fun battle(
@@ -125,7 +124,48 @@ class EvolutionHandler {
         ai: NeuralCounter = leastPlayed()
     ) {
         players.forEach { opponent ->
-            singleBattle(ai, opponent(), true)
+            singleBattle(ai, opponent())
+        }
+    }
+
+    fun battleScored(
+        players: List<Triple<() -> AI, Int, Int>>,
+        ai: NeuralCounter = leastPlayed()
+    ) {
+        players.forEach { (opponent, score, repeat) ->
+            repeat(repeat) {
+                singleBattle(ai, opponent(), score)
+            }
+        }
+    }
+
+    fun softEvolve(
+        toEvolve: RandomNeuralAI,
+        training: List<Move> = emptyList()
+    ) {
+        val before = neurals.toList()
+
+        val new = listOf(
+            { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }) },
+            { toEvolve.copy(training, dense = toEvolve.denseLayer.map { it.softRandomize() }) },
+            { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }, dense = toEvolve.denseLayer.map { it.softRandomize() }) }
+        ).mapNotNull {
+            try {
+                it()
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        new.forEach { evolved ->
+            neurals += NeuralCounter(evolved)
+        }
+
+        val after = neurals.toList()
+
+        println("Created from softEvolve:")
+        after.filterNot { before.contains(it) }.forEach {
+            println(it.ai.info())
         }
     }
 
@@ -149,7 +189,7 @@ class EvolutionHandler {
                     dense = toEvolve.denseLayer.map { it.randomize() },
                     output =  NeuralAIFactory.randomDenseLayer(7)
                 )
-            },
+            }
         ).mapNotNull {
             try {
                 it()
@@ -186,7 +226,7 @@ class EvolutionHandler {
     fun currentScore(printAll: Boolean = true, printHighest: Boolean = true) {
         if (printAll) {
             println("Score")
-            neurals.forEach {
+            neurals.sortedByDescending { it.gamesWon }.forEach {
                 println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
             }
         }
@@ -226,6 +266,13 @@ class EvolutionHandler {
                 i++
             } catch (_: Exception) {
             }
+        }
+    }
+
+    fun initFromStored(storedNeurals: List<StoredNeuralAI>) {
+        storedNeurals.map { it.toRandomNeural() }.forEach {
+            println("converted: ${it.info()}")
+            neurals += NeuralCounter(it)
         }
     }
 }

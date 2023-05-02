@@ -13,6 +13,9 @@ application {
 }
 
 dependencies {
+    implementation("io.ktor:ktor-server-netty-jvm:2.2.4")
+    testImplementation("io.ktor:ktor-server-tests-jvm:2.2.4")
+    testImplementation("io.ktor:ktor-server-test-host-jvm:2.2.4")
     val ktorVersion = findProperty("ktorVersion")
 
     implementation(project(":shared"))
@@ -20,7 +23,6 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.20")
 
-    implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-websockets:$ktorVersion")
     implementation("io.ktor:ktor-server-html-builder:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
@@ -34,8 +36,6 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.2.11") // TODO 1.4.1
 
     testImplementation(kotlin("test"))
-    testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
-    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
 }
 
 tasks.withType<ShadowJar> {

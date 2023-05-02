@@ -10,7 +10,7 @@ class BattleCounter(
 )
 
 class BattleHandler(players: List<AI>) {
-    private val counters = players.map { BattleCounter(it) }
+    val counters = players.map { BattleCounter(it) }
 
     private fun leastPlayed(): BattleCounter =
         counters.minBy { it.gamesPlayed }
@@ -50,7 +50,7 @@ class BattleHandler(players: List<AI>) {
     fun currentScore(printAll: Boolean = true, printHighest: Boolean = true) {
         if (printAll) {
             println("Score")
-            counters.forEach {
+            counters.sortedByDescending { it.gamesWon }.forEach {
                 println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.name}")
             }
         }
