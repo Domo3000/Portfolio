@@ -2,6 +2,7 @@ package projects.connect4
 
 import react.FC
 import react.Props
+import web.window.WindowTarget
 import react.dom.html.ReactHTML
 
 val About = FC<Props> {
@@ -25,6 +26,7 @@ val About = FC<Props> {
             ReactHTML.p {
                 ReactHTML.a {
                     href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/connect4/ai/length/LengthAI.kt"
+                    target = WindowTarget._blank
                     +"Source Code"
                 }
             }
@@ -39,6 +41,7 @@ val About = FC<Props> {
             ReactHTML.p {
                 ReactHTML.a {
                     href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/connect4/ai/monte/MonteCarloAI.kt"
+                    target = WindowTarget._blank
                     +"Source Code"
                 }
             }
@@ -56,6 +59,7 @@ val About = FC<Props> {
             ReactHTML.p {
                 ReactHTML.a {
                     href = "https://github.com/Domo3000/Portfolio/tree/main/server/src/main/kotlin/connect4/ai/neural"
+                    target = WindowTarget._blank
                     +"Source Code"
                 }
             }

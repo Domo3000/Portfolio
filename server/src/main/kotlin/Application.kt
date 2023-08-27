@@ -1,31 +1,23 @@
 import connect4.Connect4ConnectionHandler
 import connect4.Connect4GameHandler
-//import connect4.createConnect4AboutWebsocket
-import connect4.createConnect4Websocket
-import data.CSS
-import data.index
-import data.styles
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
-import io.ktor.server.html.*
-import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.cachingheaders.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.css.CssBuilder
-import kotlinx.html.HTML
 import org.slf4j.LoggerFactory
+import routing.installRouting
 import utils.logError
 import java.io.File
 import java.security.KeyStore
-import java.util.Properties
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -75,15 +67,6 @@ suspend fun main(): Unit = coroutineScope {
     embeddedServer(Netty, environment).start(wait = true)
 }
 
-private suspend fun ApplicationCall.respondText(text: String) = respondText(text = text, status = HttpStatusCode.OK)
-
-/**
- * https://ktor.io/docs/css-dsl.html#serve_css
- */
-private suspend inline fun ApplicationCall.respondCss(css: CSS) {
-    this.respondText(CssBuilder().apply(css).toString(), ContentType.Text.CSS)
-}
-
 private fun Application.body(debug: Boolean) {
     with(Connect4ConnectionHandler) {
         with(Connect4GameHandler) {
@@ -114,28 +97,18 @@ private fun Application.body(debug: Boolean) {
                     maxFrameSize = Long.MAX_VALUE
                     masking = false
                 }
-                routing {
-                    createConnect4Websocket()
-                    //createConnect4AboutWebsocket() TODO
-                    get("/health") {
-                        call.respondText("Healthy!")
-                    }
-                    get("/robots.txt") {
-                        call.respondText(
-                            """User-agent: *
-                              |Allow: /""".trimMargin()
-                        )
-                    }
-                    get("/static/styles.css") {
-                        call.respondCss(CssBuilder::styles)
-                    }
-                    get("/{...}") {
-                        call.respondHtml(HttpStatusCode.OK, HTML::index)
-                    }
-                    static("/static") {
-                        resources("assets")
+                install(CachingHeaders) {
+                    options { _, outgoingContent ->
+                        when (outgoingContent.contentType?.withoutParameters()) {
+                            ContentType.Text.CSS, ContentType.Image.JPEG, ContentType.Image.PNG ->
+                                CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 24 * 60 * 60))
+                            ContentType.Text.JavaScript ->
+                                CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 365 * 24 * 60 * 60))
+                            else -> null
+                        }
                     }
                 }
+                installRouting()
             }
         }
     }
