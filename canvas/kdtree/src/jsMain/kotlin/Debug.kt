@@ -8,11 +8,11 @@ import web.cssom.pct
 import web.cssom.px
 import emotion.react.css
 import web.events.Event
-import org.w3c.dom.events.KeyboardEvent
 import props.*
 import react.*
 import react.dom.html.ReactHTML
 import web.cssom.Float
+import web.uievents.KeyboardEvent
 
 class StringHolder(var s: String)
 class IntHolder(var n: Int)
