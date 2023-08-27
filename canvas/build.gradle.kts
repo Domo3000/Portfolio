@@ -1,13 +1,17 @@
 plugins {
-    kotlin("js")
+    kotlin("multiplatform")
 }
 
 kotlin {
     js {
         browser { }
     }
-}
-
-dependencies {
-    implementation(project(":shared:js"))
+    sourceSets {
+        val jsMain by getting {
+            dependencies {
+                implementation(libs.bundles.frontend)
+                implementation(project(":shared:js"))
+            }
+        }
+    }
 }

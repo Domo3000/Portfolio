@@ -38,6 +38,9 @@ data class GameFinishedMessage(val player: Player?) : Connect4Message()
 data class NextMoveMessage(val column: Int) : Connect4Message()
 
 @Serializable
+data class AllNextMoveMessage(val moves: List<Pair<String, Int>>) : Connect4Message()
+
+@Serializable
 object WaitMessage : Connect4Message()
 
 @Serializable

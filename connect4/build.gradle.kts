@@ -1,5 +1,5 @@
 plugins {
-    kotlin("js")
+    kotlin("multiplatform")
     kotlin("plugin.serialization")
 }
 
@@ -13,19 +13,20 @@ kotlin {
             }
         }
     }
-}
-
-dependencies {
-    val ktorVersion = findProperty("ktorVersion")
-    val coroutineVersion = findProperty("coroutineVersion")
-
-    implementation(project(":canvas"))
-    implementation(project(":shared-connect4"))
-    implementation("io.ktor:ktor-client-js:$ktorVersion")
-    implementation("io.ktor:ktor-client-json-js:$ktorVersion")
-    implementation("io.ktor:ktor-client-serialization-js:$ktorVersion")
-    implementation("io.ktor:ktor-client-logging-js:$ktorVersion")
-    implementation("io.ktor:ktor-client-websockets:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$coroutineVersion")
-    testImplementation(kotlin("test"))
+    sourceSets {
+        val jsMain by getting {
+            dependencies {
+                implementation(project(":canvas"))
+                implementation(project(":shared:js"))
+                implementation(project(":shared-connect4"))
+                implementation(libs.bundles.frontend)
+                implementation(libs.bundles.webhooks)
+            }
+        }
+        val jsTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
 }

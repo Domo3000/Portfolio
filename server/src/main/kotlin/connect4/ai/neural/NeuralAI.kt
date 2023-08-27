@@ -185,7 +185,8 @@ abstract class NeuralAI(
 }
 
 class OverallHighestAI(private val neurals: List<NeuralAI>) : AI() {
-    override val name: String = "overallHighest: " + neurals.joinToString(",") { it.name }
+    override val name: String =
+        "OverallHighest(" + neurals.joinToString(",") { it.name.removeSurrounding("StoredNeural(", ")") } + ")"
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
         return neurals.map {
@@ -201,7 +202,8 @@ class OverallHighestAI(private val neurals: List<NeuralAI>) : AI() {
 }
 
 class MostCommonAI(private val neurals: List<NeuralAI>) : AI() {
-    override val name: String = "mostCommon: " + neurals.joinToString(",") { it.name }
+    override val name: String =
+        "MostCommon(" + neurals.joinToString(",") { it.name.removeSurrounding("StoredNeural(", ")") } + ")"
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
         return neurals.map {

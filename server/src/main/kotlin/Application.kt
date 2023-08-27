@@ -1,5 +1,6 @@
 import connect4.Connect4ConnectionHandler
 import connect4.Connect4GameHandler
+//import connect4.createConnect4AboutWebsocket
 import connect4.createConnect4Websocket
 import data.CSS
 import data.index
@@ -14,6 +15,7 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -23,6 +25,7 @@ import org.slf4j.LoggerFactory
 import utils.logError
 import java.io.File
 import java.security.KeyStore
+import java.util.Properties
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -113,6 +116,7 @@ private fun Application.body(debug: Boolean) {
                 }
                 routing {
                     createConnect4Websocket()
+                    //createConnect4AboutWebsocket() TODO
                     get("/health") {
                         call.respondText("Healthy!")
                     }

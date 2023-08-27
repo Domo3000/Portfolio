@@ -91,16 +91,20 @@ class EvolutionHandler {
             counter.ai.train(trainingMoves)
             counter.trained++
         } else {
-            runBlocking {
-                toTrain.map { counter ->
-                    CoroutineScope(Dispatchers.Default).async {
-                        if (counter.ai.train(trainingMoves)) {
-                            counter.trained++
-                        } else {
-                            neurals -= counter
+            val chunks = toTrain.shuffled().chunked(5)
+
+            chunks.map { trainees ->
+                runBlocking {
+                    trainees.map { counter ->
+                        CoroutineScope(Dispatchers.Default).async {
+                            if (counter.ai.train(trainingMoves)) {
+                                counter.trained++
+                            } else {
+                                neurals -= counter
+                            }
                         }
-                    }
-                }.awaitAll()
+                    }.awaitAll()
+                }
             }
         }
     }
@@ -146,7 +150,9 @@ class EvolutionHandler {
         val before = neurals.toList()
 
         val new = listOf(
+            { toEvolve.copy(training, input = !toEvolve.inputSingular, conv = toEvolve.convLayer.map { it.softRandomize() }) },
             { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }) },
+            { toEvolve.copy(training, input = !toEvolve.inputSingular, dense = toEvolve.denseLayer.map { it.softRandomize() }) },
             { toEvolve.copy(training, dense = toEvolve.denseLayer.map { it.softRandomize() }) },
             { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }, dense = toEvolve.denseLayer.map { it.softRandomize() }) }
         ).mapNotNull {

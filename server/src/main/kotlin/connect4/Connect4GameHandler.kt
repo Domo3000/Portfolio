@@ -29,35 +29,29 @@ object Connect4GameHandler {
         }
     }
 
+    val allNeurals by lazy { storedHandler.allNeurals() }
+
+    val overallHighestAis by lazy {
+        listOf(Regex("[012]"), Regex("[134]"), Regex("[245]")).map { r ->
+            OverallHighestAI(storedHandler.allNeurals().filter { it.name.contains(r) } )
+        }
+    }
+
+    val mostCommonAis by lazy {
+        listOf(Regex("[167]"), Regex("[236]"), Regex("[678]")).map { r ->
+            MostCommonAI(storedHandler.allNeurals().filter { it.name.contains(r) } )
+        }
+    }
+
     suspend fun makeMove(game: Connect4Game): Int = mutex.withLock {
         return when (random.nextInt(0, 3)) {
-            0 -> storedHandler.allNeurals().random()
+            0 -> allNeurals.random()
                 .nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
                 .maxBy { it.second }.first
 
-            1 -> OverallHighestAI(storedHandler.allNeurals().filter {
-                it.name.contains(
-                    Regex(
-                        when (random.nextInt(0, 3)) {
-                            0 -> "[012]"
-                            1 -> "[134]"
-                            else -> "[245]"
-                        }
-                    )
-                )
-            }).nextMove(game.field, game.availableColumns, game.currentPlayer)
+            1 -> overallHighestAis.random().nextMove(game.field, game.availableColumns, game.currentPlayer)
 
-            else -> MostCommonAI(storedHandler.allNeurals().filter {
-                it.name.contains(
-                    Regex(
-                        when (random.nextInt(0, 3)) {
-                            0 -> "[236]"
-                            1 -> "[167]"
-                            else -> "[678]"
-                        }
-                    )
-                )
-            }).nextMove(game.field, game.availableColumns, game.currentPlayer)
+            else -> mostCommonAis.random().nextMove(game.field, game.availableColumns, game.currentPlayer)
         }
     }
 }

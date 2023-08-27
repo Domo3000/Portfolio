@@ -54,13 +54,12 @@ tasks.withType<ShadowJar> {
     }
 
     for(project in projects) {
-        dependsOn(":$project:browser${environment}Webpack")
-        val js = tasks.getByPath(":$project:browser${environment}Webpack") as KotlinWebpack
-        into("assets") { from(File(js.destinationDirectory, js.outputFileName)) }
+        dependsOn(":$project:jsBrowser${environment}Webpack")
+        val js = tasks.getByPath(":$project:jsBrowser${environment}Webpack") as KotlinWebpack
+        into("assets") { from(File(js.outputDirectory.asFile.get(), js.mainOutputFileName.get())) }
     }
 
     manifest {
-        //attributes(Pair("Main-Class", "ApplicationKt"))
         attributes(Pair("Implementation-Version", "1.15"))
     }
 

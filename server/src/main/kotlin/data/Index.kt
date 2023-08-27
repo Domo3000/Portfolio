@@ -3,6 +3,7 @@ package data
 import kotlinx.html.*
 
 fun HTML.index() {
+    val version = "0.5.0"
     head {
         title("Domo")
         meta {
@@ -13,16 +14,28 @@ fun HTML.index() {
             rel = "stylesheet"
             href = "/static/styles.css"
         }
+        link {
+            rel = "icon"
+            type = "image/png"
+            sizes = "16x16"
+            href = "/static/favicon-16x16.png"
+        }
+        link {
+            rel = "icon"
+            type = "image/png"
+            sizes = "32x32"
+            href = "/static/favicon-32x32.png"
+        }
     }
     body {
         div {
             id = "script-holder"
-            script(src = "/static/main.js") { }
+            script(src = "/static/main-$version.js") { }
         }
-        script(src = "/static/automaton.js") { async = true }
-        script(src = "/static/kdtree.js") { async = true }
-        script(src = "/static/shuffle.js") { async = true }
-        script(src = "/static/labyrinth.js") { async = true }
-        script(src = "/static/connect4.js") { async = true }
+        script(src = "/static/automaton-$version.js") { async = true }
+        script(src = "/static/kdtree-$version.js") { async = true }
+        script(src = "/static/shuffle-$version.js") { async = true }
+        script(src = "/static/labyrinth-$version.js") { async = true }
+        script(src = "/static/connect4-$version.js") { async = true }
     }
 }

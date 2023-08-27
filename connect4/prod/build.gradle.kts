@@ -1,5 +1,5 @@
 plugins {
-    kotlin("js")
+    kotlin("multiplatform")
 }
 
 kotlin {
@@ -7,12 +7,16 @@ kotlin {
         binaries.executable()
         browser {
             webpackTask {
-                outputFileName = "connect4.js"
+                val version = findProperty("version")
+                outputFileName = "connect4-$version.js"
             }
         }
     }
-}
-
-dependencies {
-    implementation(project(":connect4"))
+    sourceSets {
+        val jsMain by getting {
+            dependencies {
+                implementation(project(":connect4"))
+            }
+        }
+    }
 }

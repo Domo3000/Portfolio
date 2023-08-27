@@ -1,5 +1,5 @@
 plugins {
-    kotlin("js")
+    kotlin("multiplatform")
 }
 
 kotlin {
@@ -7,7 +7,8 @@ kotlin {
         binaries.executable()
         browser {
             webpackTask {
-                outputFileName = "shuffle.js"
+                val version = findProperty("version")
+                outputFileName = "shuffle-$version.js"
             }
             testTask {
                 useKarma {
@@ -16,9 +17,18 @@ kotlin {
             }
         }
     }
-}
-
-dependencies {
-    implementation(project(":canvas"))
-    testImplementation(kotlin("test"))
+    sourceSets {
+        val jsMain by getting {
+            dependencies {
+                implementation(libs.bundles.frontend)
+                implementation(project(":shared:js"))
+                implementation(project(":canvas"))
+            }
+        }
+        val jsTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
 }
