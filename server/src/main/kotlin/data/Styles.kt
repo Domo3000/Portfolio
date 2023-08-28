@@ -50,6 +50,7 @@ fun CssBuilder.styles(steps: Int = 4) {
         }
     }
 
+    // TODO get rid of this, use something better instead
     val begin = 800
     val end = 1200
     (1..steps).forEach { step ->

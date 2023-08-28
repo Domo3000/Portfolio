@@ -5,6 +5,7 @@ import web.cssom.FontWeight
 import web.cssom.TextAlign
 import emotion.react.css
 import kotlinx.browser.window
+import props.button
 import props.list
 import web.events.Event
 import react.*
@@ -54,7 +55,29 @@ private class State(initialSize: Int, private val setSize: StateSetter<Int>) {
         decks.add(newRow)
         setSize(size)
     }
+
+    fun loadFromResult(result: Result) {
+        val newRows = mutableListOf(
+            listOf(Position(0, 0) to ShuffleCounter(Deck(1), 1, true))
+        )
+
+        result.rows.map { row ->
+            val y = row.size
+            newRows.add(row.counters.map { counter ->
+                val x = counter.piles
+                Position(x - 2, y - 2) to ShuffleCounter(Deck(1), counter.count, true)
+            } + (Position(y - 2, y - 2) to ShuffleCounter(Deck(1), 1, true)))
+        }
+
+
+        decks.clear()
+        decks.addAll(newRows)
+        size = newRows.size
+        setSize(newRows.size)
+    }
 }
+
+private fun Pair<Position, ShuffleCounter>.toPrettyString() = "${first.y + 2}:${first.x + 2} = ${second.counter}"
 
 class About : ExternalCanvas() {
     override val name: String = "ShuffleAbout"
@@ -67,10 +90,13 @@ class About : ExternalCanvas() {
             val (haveFinished, setHaveFinished) = useState(0)
             val (showDetails, setShowDetails) = useState(Details())
             val (state, _) = useState(State(size, setSize))
+            val (precalculatedResults, setPrecalculatedResults) = useState(Result(mutableListOf()))
+            val (usingPrecalculatedResults, setUsingPrecalculatedResults) = useState(false)
 
             fun getPower(size: Int) = when (size) {
                 in 0..100 -> 10.0 + size / 10.0
-                else -> 20.0
+                in 100..200 -> 20.0 + (size - 100) / 20.0
+                else -> 25.0
             }
 
             fun getColor(n: Long): String {
@@ -78,7 +104,7 @@ class About : ExternalCanvas() {
                     return "DimGray"
                 }
 
-                val range = 240
+                val range = 300
                 val power = getPower(state.size)
                 val scaled = (log(n.toDouble(), 2.0) * (range / power)).toInt()
 
@@ -207,10 +233,8 @@ class About : ExternalCanvas() {
                 showDetails.position?.let { (x, y) ->
                     val element = state.decks[y][x].second
                     ReactHTML.p {
-                        +"${showDetails.position.y + 2}:${showDetails.position.x + 2} = ${element.counter}"
-                        if (element.finished) {
-                            +" has finished!"
-                        } else {
+                        +(showDetails.position to element).toPrettyString()
+                        if (!element.finished) {
                             +"+"
                         }
                     }
@@ -232,10 +256,11 @@ class About : ExternalCanvas() {
                     }
                     list {
                         texts = listOf(
-                            "Take n cards and reorganize them into k piles",
+                            "Take n cards and reorganize them into k piles by",
                             "First card on first pile, second card on second pile, ...",
                             "k'th card on k'th pile, k+1'th card on 1st pile, ...",
-                            "Once all cards have been put into piles put those on top of each other."
+                            "Once all cards have been put into piles put those on top of each other.",
+                            "First pile on the bottom, second pile on first pile, ..."
                         )
                     }
                     ReactHTML.p {
@@ -246,6 +271,9 @@ class About : ExternalCanvas() {
                     }
                     ReactHTML.p {
                         +"Deck:[1, 3, 2, 4] with 3-pile shuffle => Pile1:[1, 4], Pile2:[3], Pile3:[2] => Deck:[1, 4, 3, 2]"
+                    }
+                    ReactHTML.p {
+                        +"Note that the first card always stays the same."
                     }
                 }
                 ReactHTML.details {
@@ -259,13 +287,10 @@ class About : ExternalCanvas() {
                         )
                     }
                     ReactHTML.p {
-                        +"Previous example would be 4:(2->3) and 4:2 = 2"
-                    }
-                    ReactHTML.p {
                         +"Cases that I find interesting are those where adding more pile shuffles leads to more order."
                     }
                     ReactHTML.p {
-                        +"For example 99:(3-5), 99:(3-7) and 99:(5-7) all looks more 'random' than 99:(3-5-7)"
+                        +"For example 99:(3-5), 99:(3-7) and 99:(5-7) all look more 'random' than 99:(3-5-7)"
                     }
                 }
                 ReactHTML.details {
@@ -306,7 +331,7 @@ class About : ExternalCanvas() {
 
                     val power = getPower(size).toInt()
 
-                    (0..power).forEach {
+                    (0..(power + 1)).forEach {
                         val n = 2.0.pow(it).toLong()
                         ReactHTML.div {
                             css {
@@ -317,6 +342,31 @@ class About : ExternalCanvas() {
                         }
                     }
                 }
+                if (usingPrecalculatedResults) {
+                    ReactHTML.details {
+                        ReactHTML.summary {
+                            +"Highest"
+                        }
+                        state.decks.flatten().sortedByDescending { it.second.counter }.take(10).map { counter ->
+                            ReactHTML.p {
+                                +counter.toPrettyString()
+                            }
+                        }
+                    }
+                }
+
+                if (precalculatedResults.rows.isNotEmpty() && !usingPrecalculatedResults) {
+                    button {
+                        text = "Use precalculated results instead"
+                        onClick = {
+                            clearInterval()
+                            state.loadFromResult(precalculatedResults)
+                            setHaveFinished(precalculatedResults.rows.sumOf { it.counters.size + 1 } + 1)
+                            setUsingPrecalculatedResults(true)
+                            draw()
+                        }
+                    }
+                }
             }
 
             useEffectOnce {
@@ -324,6 +374,10 @@ class About : ExternalCanvas() {
                 addEventListener("resize" to resizeHandler)
                 draw()
                 frameId = window.requestAnimationFrame { runStep() }
+
+                Requests.getMessage("/static/counters.json") {
+                    setPrecalculatedResults(it as Result)
+                }
             }
         }
 

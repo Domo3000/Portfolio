@@ -97,14 +97,18 @@ private fun Application.body(debug: Boolean) {
                     maxFrameSize = Long.MAX_VALUE
                     masking = false
                 }
-                install(CachingHeaders) {
-                    options { _, outgoingContent ->
-                        when (outgoingContent.contentType?.withoutParameters()) {
-                            ContentType.Text.CSS, ContentType.Image.JPEG, ContentType.Image.PNG ->
-                                CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 24 * 60 * 60))
-                            ContentType.Application.JavaScript ->
-                                CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 365 * 24 * 60 * 60))
-                            else -> null
+                if (!debug) {
+                    install(CachingHeaders) {
+                        options { _, outgoingContent ->
+                            when (outgoingContent.contentType?.withoutParameters()) {
+                                ContentType.Text.CSS, ContentType.Image.JPEG, ContentType.Image.PNG ->
+                                    CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 24 * 60 * 60))
+
+                                ContentType.Application.JavaScript, ContentType.Application.Json ->
+                                    CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 365 * 24 * 60 * 60))
+
+                                else -> null
+                            }
                         }
                     }
                 }
