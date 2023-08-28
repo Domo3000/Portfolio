@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
 }
 
 kotlin {
@@ -8,7 +9,7 @@ kotlin {
         browser {
             webpackTask {
                 val version = findProperty("version")
-                outputFileName = "kdtree-$version.js"
+                outputFileName = "shuffle-$version.js"
             }
             testTask {
                 useKarma {
@@ -21,8 +22,9 @@ kotlin {
         val jsMain by getting {
             dependencies {
                 implementation(libs.bundles.frontend)
-                implementation(project(":shared:js"))
-                implementation(project(":canvas"))
+                implementation(project(":frontend"))
+                implementation(project(":frontend:canvas"))
+                implementation(project(":frontend:requests"))
             }
         }
         val jsTest by getting {

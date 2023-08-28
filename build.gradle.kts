@@ -21,3 +21,6 @@ allprojects {
         }
     }
 }
+
+project(":server").evaluationDependsOn(":frontend:canvas")
+project(":server").evaluationDependsOn(":frontend:canvas:connect4")

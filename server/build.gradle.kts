@@ -47,16 +47,16 @@ tasks.withType<ShadowJar> {
     val debug = System.getenv("DEBUG")
     val projects = mutableListOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle", "canvas:labyrinth")
     val environment = if(debug == "true") {
-        projects.add("connect4:debug")
+        projects.add("canvas:connect4:debug")
         "Development"
     } else {
-        projects.add("connect4:prod")
+        projects.add("canvas:connect4:prod")
         "Production"
     }
 
     for(project in projects) {
-        dependsOn(":$project:jsBrowser${environment}Webpack")
-        val js = tasks.getByPath(":$project:jsBrowser${environment}Webpack") as KotlinWebpack
+        dependsOn(":frontend:$project:jsBrowser${environment}Webpack")
+        val js = tasks.getByPath(":frontend:$project:jsBrowser${environment}Webpack") as KotlinWebpack
         into("assets") { from(File(js.outputDirectory.asFile.get(), js.mainOutputFileName.get())) }
     }
 

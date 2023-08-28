@@ -10,7 +10,6 @@ kotlin {
         val jsMain by getting {
             dependencies {
                 implementation(libs.bundles.frontend)
-                implementation(project(":shared:js"))
             }
         }
     }

@@ -16,8 +16,8 @@ kotlin {
     sourceSets {
         val jsMain by getting {
             dependencies {
-                implementation(project(":canvas"))
-                implementation(project(":shared:js"))
+                implementation(project(":frontend:canvas"))
+                implementation(project(":frontend"))
                 implementation(project(":shared-connect4"))
                 implementation(libs.bundles.frontend)
                 implementation(libs.bundles.webhooks)

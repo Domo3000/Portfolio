@@ -15,7 +15,7 @@ kotlin {
     sourceSets {
         val jsMain by getting {
             dependencies {
-                implementation(project(":connect4"))
+                implementation(project(":frontend:canvas:connect4"))
             }
         }
     }

@@ -18,7 +18,7 @@ kotlin {
                 val coroutineVersion = findProperty("coroutineVersion")
 
                 implementation(libs.bundles.frontend)
-                implementation(project(":shared:js"))
+                implementation(project(":frontend"))
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.15.0-pre.620")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVersion")
             }

@@ -2,12 +2,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
-private val json: Json = Json {
-    prettyPrint = true
-    ignoreUnknownKeys = true
-    classDiscriminator = "class"
-}
-
 @Serializable
 sealed class Message
 
