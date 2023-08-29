@@ -19,7 +19,7 @@ dependencies {
     val ktorVersion = findProperty("ktorVersion")
 
     implementation(project(":shared"))
-    implementation(project(":shared-connect4"))
+    implementation(project(":shared:connect4"))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.20")
 

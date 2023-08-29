@@ -7,7 +7,13 @@ kotlin {
     jvm()
 
     js {
-        browser()
+        browser {
+            testTask {
+                useKarma {
+                    useFirefox()
+                }
+            }
+        }
     }
 
     sourceSets {

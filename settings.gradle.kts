@@ -49,9 +49,9 @@ dependencyResolutionManagement {
 rootProject.name = "Portfolio"
 
 include(":shared")
+include(":shared:connect4")
 include(":frontend:canvas")
 include(":frontend:requests")
-include(":shared-connect4")
 include(":frontend:browser")
 include(":frontend:canvas:automaton")
 include(":frontend:canvas:kdtree")
