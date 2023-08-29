@@ -3,7 +3,7 @@ package data
 import kotlinx.html.*
 
 fun HTML.index() {
-    val version = "0.5.1"
+    val version = "0.5.2"
     head {
         title("Domo")
         meta {
