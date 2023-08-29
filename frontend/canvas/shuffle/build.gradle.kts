@@ -7,15 +7,15 @@ kotlin {
     js {
         binaries.executable()
         browser {
-            webpackTask {
+            webpackTask(Action {
                 val version = findProperty("version")
-                outputFileName = "shuffle-$version.js"
-            }
-            testTask {
+                mainOutputFileName.set( "shuffle-$version.js")
+            })
+            testTask(Action {
                 useKarma {
                     useFirefox()
                 }
-            }
+            })
         }
     }
     sourceSets {

@@ -8,11 +8,11 @@ kotlin {
 
     js {
         browser {
-            testTask {
+            testTask(Action {
                 useKarma {
                     useFirefox()
                 }
-            }
+            })
         }
     }
 

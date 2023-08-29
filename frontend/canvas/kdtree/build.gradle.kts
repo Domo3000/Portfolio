@@ -6,15 +6,15 @@ kotlin {
     js {
         binaries.executable()
         browser {
-            webpackTask {
+            webpackTask(Action {
                 val version = findProperty("version")
-                outputFileName = "kdtree-$version.js"
-            }
-            testTask {
+                mainOutputFileName.set( "kdtree-$version.js")
+            })
+            testTask(Action {
                 useKarma {
                     useFirefox()
                 }
-            }
+            })
         }
     }
     sourceSets {

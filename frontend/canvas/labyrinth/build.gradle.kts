@@ -6,10 +6,10 @@ kotlin {
     js {
         binaries.executable()
         browser {
-            webpackTask {
+            webpackTask(Action {
                 val version = findProperty("version")
-                outputFileName = "labyrinth-$version.js"
-            }
+                mainOutputFileName.set( "labyrinth-$version.js")
+            })
         }
     }
     sourceSets {

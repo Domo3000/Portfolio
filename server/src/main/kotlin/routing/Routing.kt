@@ -42,7 +42,5 @@ fun Application.installRouting() = routing {
     get("/{...}") {
         call.respondHtml(HttpStatusCode.OK, HTML::index)
     }
-    static("/static") {
-        resources("assets")
-    }
+    staticResources("/static", "assets")
 }
