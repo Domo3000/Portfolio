@@ -19,12 +19,12 @@ data class Position(val x: Int = -1, val y: Int = -1) {
 
 fun Position.toPrettyString() = "${this.y + 2}:${this.x + 2}"
 
-class State(initialSize: Int, private val inShuffle: Boolean, private val setSize: StateSetter<Int>) {
+class State(initialSize: Int, private val outShuffle: Boolean, private val setSize: StateSetter<Int>) {
     var size = initialSize
 
     val decks = Array(size) { y ->
         Array(y + 1) { x ->
-            Position(x, y) to ShuffleCounter(Deck(y + 2, inShuffle))
+            Position(x, y) to ShuffleCounter(Deck(y + 2, outShuffle))
         }.toList()
     }.toMutableList()
 
@@ -42,22 +42,22 @@ class State(initialSize: Int, private val inShuffle: Boolean, private val setSiz
 
     fun addRow() {
         size += 1
-        val newRow = Array(size) { x -> Position(x, size - 1) to ShuffleCounter(Deck(size + 1, inShuffle)) }.toList()
+        val newRow = Array(size) { x -> Position(x, size - 1) to ShuffleCounter(Deck(size + 1, outShuffle)) }.toList()
         decks.add(newRow)
         setSize(size)
     }
 
     fun loadFromResult(result: Result) {
         val newRows = mutableListOf(
-            listOf(Position(0, 0) to ShuffleCounter(Deck(1, inShuffle), 1, true))
+            listOf(Position(0, 0) to ShuffleCounter(Deck(1, outShuffle), 1, true))
         )
 
         result.rows.map { row ->
             val y = row.size
             newRows.add(row.counters.map { counter ->
                 val x = counter.piles
-                Position(x - 2, y - 2) to ShuffleCounter(Deck(1, inShuffle), counter.count, true)
-            } + (Position(y - 2, y - 2) to ShuffleCounter(Deck(1, inShuffle), 1, true)))
+                Position(x - 2, y - 2) to ShuffleCounter(Deck(1, outShuffle), counter.count, true)
+            } + (Position(y - 2, y - 2) to ShuffleCounter(Deck(1, outShuffle), 1, true)))
         }
 
 

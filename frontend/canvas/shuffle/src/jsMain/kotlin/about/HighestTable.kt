@@ -7,8 +7,8 @@ import react.dom.html.ReactHTML
 import web.cssom.pct
 
 external interface HighestTableProps : Props {
-    var inHighest: List<Pair<Position, ShuffleCounter>>
     var outHighest: List<Pair<Position, ShuffleCounter>>
+    var inHighest: List<Pair<Position, ShuffleCounter>>
 }
 
 val HighestTable = FC<HighestTableProps> { props ->
@@ -19,11 +19,11 @@ val HighestTable = FC<HighestTableProps> { props ->
         ReactHTML.thead {
             ReactHTML.tr {
                 ReactHTML.th {
-                    +"In-Shuffle"
+                    +"Out-Shuffle"
                     colSpan = 2
                 }
                 ReactHTML.th {
-                    +"Out-Shuffle"
+                    +"In-Shuffle"
                     colSpan = 2
                 }
             }
@@ -43,18 +43,18 @@ val HighestTable = FC<HighestTableProps> { props ->
             }
         }
         ReactHTML.tbody {
-            props.inHighest.zip(props.outHighest).map { (inPair, outPair) ->
+            props.outHighest.zip(props.inHighest).map { (inPair, outPair) ->
                 ReactHTML.tr {
-                    ReactHTML.th {
+                    ReactHTML.td {
                         +inPair.first.toPrettyString()
                     }
-                    ReactHTML.th {
+                    ReactHTML.td {
                         +inPair.second.counter.toString()
                     }
-                    ReactHTML.th {
+                    ReactHTML.td {
                         +outPair.first.toPrettyString()
                     }
-                    ReactHTML.th {
+                    ReactHTML.td {
                         +outPair.second.counter.toString()
                     }
                 }

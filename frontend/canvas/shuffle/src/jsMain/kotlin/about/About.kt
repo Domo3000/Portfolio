@@ -21,11 +21,11 @@ private fun Pair<Position, ShuffleCounter>.toPrettyString() = "${first.toPrettyS
 
 private fun List<Pair<Position, ShuffleCounter>>.highest(n: Int) = this.sortedByDescending { it.second.counter }.take(n)
 
-private class ShuffleState(var inShuffle: Boolean, initialSize: Int, setSize: StateSetter<Int>) {
-    val inState = State(initialSize, true, setSize)
-    val outState = State(initialSize, false, setSize)
+private class ShuffleState(var outShuffle: Boolean, initialSize: Int, setSize: StateSetter<Int>) {
+    val outState = State(initialSize, true, setSize)
+    val inState = State(initialSize, false, setSize)
 
-    fun getState() = if (inShuffle) inState else outState
+    fun getState() = if (outShuffle) outState else inState
 }
 
 class About : ExternalCanvas() {
@@ -38,11 +38,10 @@ class About : ExternalCanvas() {
             val (size, setSize) = useState(9)
             val (haveFinished, setHaveFinished) = useState(0)
             val (showDetails, setShowDetails) = useState(Details())
-            val (inShuffle, setInShuffle) = useState(true)
-            val (shuffleState, _) = useState(ShuffleState(inShuffle, size, setSize))
+            val (outShuffle, setOutShuffle) = useState(true)
+            val (shuffleState, _) = useState(ShuffleState(outShuffle, size, setSize))
             val (precalculatedInResults, setPrecalculatedInResults) = useState(Result(mutableListOf()))
             val (precalculatedOutResults, setPrecalculatedOutResults) = useState(Result(mutableListOf()))
-            val (usingPrecalculatedResults, setUsingPrecalculatedResults) = useState(false)
 
             fun getPower(size: Int) = when (size) {
                 in 0..100 -> 10.0 + size / 10.0
@@ -205,7 +204,7 @@ class About : ExternalCanvas() {
 
             ReactHTML.div {
                 ShuffleDescription {
-                    this.inShuffle = inShuffle
+                    this.outShuffle = outShuffle
                 }
 
                 ReactHTML.details {
@@ -227,20 +226,20 @@ class About : ExternalCanvas() {
                     }
                 }
 
-                if (usingPrecalculatedResults) {
+                if (precalculatedInResults.rows.isNotEmpty() && precalculatedOutResults.rows.isNotEmpty()) {
                     ReactHTML.details {
                         ReactHTML.summary {
                             +"Highest"
                         }
 
                         HighestTable {
-                            inHighest = shuffleState.inState.decks.flatten().highest(10)
                             outHighest = shuffleState.outState.decks.flatten().highest(10)
+                            inHighest = shuffleState.inState.decks.flatten().highest(10)
                         }
                     }
                 }
 
-                if (!usingPrecalculatedResults) {
+                if (precalculatedInResults.rows.isEmpty()) {
                     button {
                         text = "Use precalculated results instead"
                         onClick = {
@@ -259,9 +258,9 @@ class About : ExternalCanvas() {
             }
 
             button {
-                text = "Switch to ${if (inShuffle) "out" else "in"}-shuffle"
+                text = "Switch to ${if (outShuffle) "In" else "Out"}-Shuffle"
                 onClick = {
-                    setInShuffle(!inShuffle)
+                    setOutShuffle(!outShuffle)
                 }
             }
 
@@ -269,23 +268,29 @@ class About : ExternalCanvas() {
                 if (result.rows.isNotEmpty()) {
                     state.loadFromResult(result)
                     setHaveFinished(result.rows.sumOf { it.counters.size + 1 } + 1)
-                    setUsingPrecalculatedResults(true)
                     draw()
                 }
             }
 
-            useEffect(inShuffle) {
+            useEffect(outShuffle) {
                 setShowDetails(Details())
-                shuffleState.inShuffle = inShuffle
+                shuffleState.outShuffle = outShuffle
+                setSize(shuffleState.getState().size)
                 draw()
             }
 
             useEffect(precalculatedInResults) {
-                handlePrecalculatesResults(precalculatedInResults, shuffleState.inState)
+                if(precalculatedOutResults.rows.isNotEmpty()) {
+                    handlePrecalculatesResults(precalculatedInResults, shuffleState.inState)
+                    handlePrecalculatesResults(precalculatedOutResults, shuffleState.outState)
+                }
             }
 
             useEffect(precalculatedOutResults) {
-                handlePrecalculatesResults(precalculatedOutResults, shuffleState.outState)
+                if(precalculatedInResults.rows.isNotEmpty()) {
+                    handlePrecalculatesResults(precalculatedInResults, shuffleState.inState)
+                    handlePrecalculatesResults(precalculatedOutResults, shuffleState.outState)
+                }
             }
 
             useEffectOnce {

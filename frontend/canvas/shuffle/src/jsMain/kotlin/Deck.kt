@@ -10,7 +10,7 @@ class Deck(var elements: List<Int>, var modulo: (Int, Int) -> Int) {
     val size
         get() = elements.size
 
-    constructor(size: Int, inShuffle: Boolean) : this(new(size), toModulo(inShuffle))
+    constructor(size: Int, outShuffle: Boolean) : this(new(size), toModulo(outShuffle))
 
     fun sorted(): Boolean {
         elements.forEachIndexed { i, e ->

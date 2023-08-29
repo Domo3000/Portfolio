@@ -41,11 +41,11 @@ class Shuffle : ExternalCanvas() {
             val (shufflerState, setShufflerState) = useState(2)
             val (delayState, setDelayState) = useState(200)
             val (loopState, setLoopState) = useState(false)
-            val (inShuffle, setInShuffle) = useState(true)
+            val (outShuffle, setOutShuffle) = useState(true)
             /*
             using setDeckState with immutable Decks doesn't work in the resizeHandler as it would always draw the initial deck
              */
-            val (deckState, _) = useState(Deck(deckSizeState, inShuffle))
+            val (deckState, _) = useState(Deck(deckSizeState, outShuffle))
 
             fun clearLoop() {
                 clearInterval()
@@ -143,15 +143,15 @@ class Shuffle : ExternalCanvas() {
             }
 
             button {
-                text = "Switch to ${if(inShuffle) "out" else "in"}-shuffle"
+                text = "Switch to ${if(outShuffle) "In" else "Out"}-Shuffle"
                 onClick = {
-                    setInShuffle(!inShuffle)
+                    setOutShuffle(!outShuffle)
                 }
             }
 
-            useEffect(inShuffle) {
+            useEffect(outShuffle) {
                 deckState.reset(deckSizeState)
-                deckState.setModulo(inShuffle)
+                deckState.setModulo(outShuffle)
                 draw()
             }
 

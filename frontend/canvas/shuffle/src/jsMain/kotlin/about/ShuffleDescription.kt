@@ -7,14 +7,14 @@ import react.Props
 import react.dom.html.ReactHTML
 
 external interface ShuffleDescriptionProps : Props {
-    var inShuffle: Boolean
+    var outShuffle: Boolean
     var text: String
 }
 
 val ShuffleExample = FC<ShuffleDescriptionProps> { props ->
-    val deck = Deck(4, props.inShuffle)
-    val deck2 = Deck(4, props.inShuffle)
-    val deck3 = Deck(4, props.inShuffle)
+    val deck = Deck(4, props.outShuffle)
+    val deck2 = Deck(4, props.outShuffle)
+    val deck3 = Deck(4, props.outShuffle)
     deck2.pile(2)
     deck3.pile(3)
     ReactHTML.p {
@@ -27,11 +27,11 @@ val ShuffleExample = FC<ShuffleDescriptionProps> { props ->
         +"$deck with 3-pile shuffle => ${deck.pilesString(3)} => $deck3"
     }
 }
-
+//TODO link Farro Shuffle Wikipedia
 val ShuffleDescription = FC<ShuffleDescriptionProps> { props ->
     ReactHTML.details {
         ReactHTML.summary {
-            +"k-Pile ${if (props.inShuffle) "In" else "Out"}-Shuffling Explanation"
+            +"k-Pile ${if (props.outShuffle) "Out" else "In"}-Shuffling Explanation"
         }
         list {
             texts = listOf(
@@ -39,15 +39,15 @@ val ShuffleDescription = FC<ShuffleDescriptionProps> { props ->
                 "First card on first pile, second card on second pile, ...",
                 "k'th card on k'th pile, k+1'th card on 1st pile, ...",
                 "Once all cards have been put into piles put those on top of each other."
-            ) + if (props.inShuffle) {
+            ) + if (props.outShuffle) {
                 "First pile on the bottom, second pile on first pile, ..."
             } else {
                 "Last pile on the bottom, k-1'th pile on last pile, ..."
             }
         }
-        if (props.inShuffle) {
+        if (props.outShuffle) {
             ShuffleExample {
-                inShuffle = props.inShuffle
+                outShuffle = props.outShuffle
                 text = "Doing a 2-pile shuffle again would loop back to the starting order."
             }
             ReactHTML.p {
@@ -55,7 +55,7 @@ val ShuffleDescription = FC<ShuffleDescriptionProps> { props ->
             }
         } else {
             ShuffleExample {
-                inShuffle = props.inShuffle
+                outShuffle = props.outShuffle
                 text = "Doing a 2-pile shuffle again would reverse the starting order."
             }
         }
@@ -82,7 +82,7 @@ val ShuffleDescription = FC<ShuffleDescriptionProps> { props ->
             +"Trivial Loops"
         }
         ReactHTML.p {
-            +"Note that the following only applies to In-Shuffling"
+            +"Note that the following only applies to Out-Shuffling"
         }
         ReactHTML.p {
             +"k = sqrt(n) always takes 2 repetitions to loop back, e.g. 36:6 or 100:10"
@@ -99,7 +99,7 @@ val ShuffleDescription = FC<ShuffleDescriptionProps> { props ->
             +"Non-Trivial Loops"
         }
         ReactHTML.p {
-            +"Note that the following only applies to In-Shuffling"
+            +"Note that the following only applies to Out-Shuffling"
         }
         ReactHTML.p {
             +"Sometimes loops finish after a couple of repetitions, sometimes after hundreds, and sometimes after millions."
