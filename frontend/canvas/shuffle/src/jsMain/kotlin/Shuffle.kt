@@ -3,6 +3,7 @@ import css.Classes
 import emotion.react.css
 import kotlinx.browser.window
 import props.Button
+import props.button
 import props.buttonRow
 import props.sliderInput
 import web.events.Event
@@ -40,10 +41,11 @@ class Shuffle : ExternalCanvas() {
             val (shufflerState, setShufflerState) = useState(2)
             val (delayState, setDelayState) = useState(200)
             val (loopState, setLoopState) = useState(false)
+            val (inShuffle, setInShuffle) = useState(true)
             /*
             using setDeckState with immutable Decks doesn't work in the resizeHandler as it would always draw the initial deck
              */
-            val (deckState, _) = useState(Deck(deckSizeState))
+            val (deckState, _) = useState(Deck(deckSizeState, inShuffle))
 
             fun clearLoop() {
                 clearInterval()
@@ -138,6 +140,19 @@ class Shuffle : ExternalCanvas() {
                     clearLoop()
                     setDelayState(it.target.value.toDouble().toInt())
                 }
+            }
+
+            button {
+                text = "Switch to ${if(inShuffle) "out" else "in"}-shuffle"
+                onClick = {
+                    setInShuffle(!inShuffle)
+                }
+            }
+
+            useEffect(inShuffle) {
+                deckState.reset(deckSizeState)
+                deckState.setModulo(inShuffle)
+                draw()
             }
 
             useEffect(deckSizeState) {

@@ -1,84 +1,32 @@
+package about
+
+import Requests
+import Result
 import canvas.*
 import css.Classes
-import web.cssom.Color
-import web.cssom.FontWeight
-import web.cssom.TextAlign
 import emotion.react.css
 import kotlinx.browser.window
 import props.button
-import props.list
-import web.events.Event
 import react.*
 import react.dom.html.ReactHTML
-import web.http.Request
+import web.cssom.Color
+import web.cssom.TextAlign
+import web.events.Event
 import kotlin.math.log
 import kotlin.math.pow
 
-private data class ShuffleCounter(val deck: Deck, var counter: Long = 0, var finished: Boolean = false)
-
 private data class Details(val position: Position? = null)
 
-private data class Position(val x: Int = -1, val y: Int = -1) {
-    override fun equals(other: Any?): Boolean {
-        (other as? Position)?.let {
-            if (x != it.x) return false
-            if (y != it.y) return false
-        } ?: return false
+private fun Pair<Position, ShuffleCounter>.toPrettyString() = "${first.toPrettyString()} = ${second.counter}"
 
-        return true
-    }
+private fun List<Pair<Position, ShuffleCounter>>.highest(n: Int) = this.sortedByDescending { it.second.counter }.take(n)
+
+private class ShuffleState(var inShuffle: Boolean, initialSize: Int, setSize: StateSetter<Int>) {
+    val inState = State(initialSize, true, setSize)
+    val outState = State(initialSize, false, setSize)
+
+    fun getState() = if (inShuffle) inState else outState
 }
-
-private class State(initialSize: Int, private val setSize: StateSetter<Int>) {
-    var size = initialSize
-
-    val decks = Array(size) { y ->
-        Array(y + 1) { x ->
-            Position(x, y) to ShuffleCounter(Deck(y + 2))
-        }.toList()
-    }.toMutableList()
-
-    val unfinished
-        get() = decks.flatten().filter { !it.second.finished }
-
-    val unfinishedCount
-        get() = unfinished.count()
-
-    val finished
-        get() = decks.flatten().filter { it.second.finished }
-
-    val finishedCount
-        get() = finished.count()
-
-    fun addRow() {
-        size += 1
-        val newRow = Array(size) { x -> Position(x, size - 1) to ShuffleCounter(Deck(size + 1)) }.toList()
-        decks.add(newRow)
-        setSize(size)
-    }
-
-    fun loadFromResult(result: Result) {
-        val newRows = mutableListOf(
-            listOf(Position(0, 0) to ShuffleCounter(Deck(1), 1, true))
-        )
-
-        result.rows.map { row ->
-            val y = row.size
-            newRows.add(row.counters.map { counter ->
-                val x = counter.piles
-                Position(x - 2, y - 2) to ShuffleCounter(Deck(1), counter.count, true)
-            } + (Position(y - 2, y - 2) to ShuffleCounter(Deck(1), 1, true)))
-        }
-
-
-        decks.clear()
-        decks.addAll(newRows)
-        size = newRows.size
-        setSize(newRows.size)
-    }
-}
-
-private fun Pair<Position, ShuffleCounter>.toPrettyString() = "${first.y + 2}:${first.x + 2} = ${second.counter}"
 
 class About : ExternalCanvas() {
     override val name: String = "ShuffleAbout"
@@ -90,8 +38,10 @@ class About : ExternalCanvas() {
             val (size, setSize) = useState(9)
             val (haveFinished, setHaveFinished) = useState(0)
             val (showDetails, setShowDetails) = useState(Details())
-            val (state, _) = useState(State(size, setSize))
-            val (precalculatedResults, setPrecalculatedResults) = useState(Result(mutableListOf()))
+            val (inShuffle, setInShuffle) = useState(true)
+            val (shuffleState, _) = useState(ShuffleState(inShuffle, size, setSize))
+            val (precalculatedInResults, setPrecalculatedInResults) = useState(Result(mutableListOf()))
+            val (precalculatedOutResults, setPrecalculatedOutResults) = useState(Result(mutableListOf()))
             val (usingPrecalculatedResults, setUsingPrecalculatedResults) = useState(false)
 
             fun getPower(size: Int) = when (size) {
@@ -101,6 +51,8 @@ class About : ExternalCanvas() {
             }
 
             fun getColor(n: Long): String {
+                val state = shuffleState.getState()
+
                 if (n == 0L) {
                     return "DimGray"
                 }
@@ -120,6 +72,8 @@ class About : ExternalCanvas() {
                 position: Position,
                 element: ShuffleCounter?
             ) {
+                val state = shuffleState.getState()
+
                 val x = canvasElement.getRelativeX(position.x, state.size)
                 val y = canvasElement.getRelativeY(position.y, state.size)
                 val elementWidth = canvasElement.getElementWidth(state.size)
@@ -144,7 +98,7 @@ class About : ExternalCanvas() {
                 }
             }
 
-            fun drawState() {
+            fun drawState(state: State) {
                 state.decks.forEach { list ->
                     list.forEach { (position, counter) ->
                         drawElement(Position(position.y, position.x), null)
@@ -156,7 +110,7 @@ class About : ExternalCanvas() {
             fun draw() {
                 canvasElement.resetDimensions()
                 renderingContext.clear()
-                drawState()
+                drawState(shuffleState.getState())
             }
 
             fun singleStep(position: Position, element: ShuffleCounter, repetitions: Int) {
@@ -170,6 +124,8 @@ class About : ExternalCanvas() {
             }
 
             fun runStep() {
+                val state = shuffleState.getState()
+
                 if (state.unfinishedCount < 10 && state.size < 199) {
                     state.addRow()
                     draw()
@@ -194,10 +150,7 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                ReactHTML.p {
-                    css {
-                        fontWeight = FontWeight.bold
-                    }
+                ReactHTML.strong {
                     +"Pile-Shuffling Loops"
                 }
                 ReactHTML.p {
@@ -232,7 +185,7 @@ class About : ExternalCanvas() {
 
             ReactHTML.div {
                 showDetails.position?.let { (x, y) ->
-                    val element = state.decks[y][x].second
+                    val element = shuffleState.getState().decks[y][x].second
                     ReactHTML.p {
                         +(showDetails.position to element).toPrettyString()
                         if (!element.finished) {
@@ -251,80 +204,10 @@ class About : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                ReactHTML.details {
-                    ReactHTML.summary {
-                        +"k-Pile Shuffling Explanation"
-                    }
-                    list {
-                        texts = listOf(
-                            "Take n cards and reorganize them into k piles by",
-                            "First card on first pile, second card on second pile, ...",
-                            "k'th card on k'th pile, k+1'th card on 1st pile, ...",
-                            "Once all cards have been put into piles put those on top of each other.",
-                            "First pile on the bottom, second pile on first pile, ..."
-                        )
-                    }
-                    ReactHTML.p {
-                        +"Deck:[1, 2, 3, 4] with 2-pile shuffle => Pile1:[1, 3], Pile2:[2, 4] => Deck:[1, 3, 2, 4]"
-                    }
-                    ReactHTML.p {
-                        +"Doing a 2-pile shuffle again would loop back to the starting order."
-                    }
-                    ReactHTML.p {
-                        +"Deck:[1, 3, 2, 4] with 3-pile shuffle => Pile1:[1, 4], Pile2:[3], Pile3:[2] => Deck:[1, 4, 3, 2]"
-                    }
-                    ReactHTML.p {
-                        +"Note that the first card always stays the same."
-                    }
+                ShuffleDescription {
+                    this.inShuffle = inShuffle
                 }
-                ReactHTML.details {
-                    ReactHTML.summary {
-                        +"Notation"
-                    }
-                    list {
-                        texts = listOf(
-                            "\"n:k = x\" means n cards loop back after x times repeatedly using k pile shuffles",
-                            "\"n:(2->3->4->5)\" = n cards using different k values"
-                        )
-                    }
-                    ReactHTML.p {
-                        +"Cases that I find interesting are those where adding more pile shuffles leads to more order."
-                    }
-                    ReactHTML.p {
-                        +"For example 99:(3-5), 99:(3-7) and 99:(5-7) all look more 'random' than 99:(3-5-7)"
-                    }
-                }
-                ReactHTML.details {
-                    ReactHTML.summary {
-                        +"Trivial Loops"
-                    }
-                    ReactHTML.p {
-                        +"k = sqrt(n) always takes 2 repetitions to loop back, e.g. 36:6 or 100:10"
-                    }
-                    ReactHTML.p {
-                        +"Simple math rules apply to those loops, e.g. 100:(10->10) == 100:(2->5->10) == 100:(2->5->2->5) == 100:(4->5->5) == 100:(5->20) == 100:(4->25)"
-                    }
-                    ReactHTML.p {
-                        +"Order doesn't matter, e.g. 100:(4->5->5) == 100:(5->4->5) == 100:(5->5->4)"
-                    }
-                }
-                ReactHTML.details {
-                    ReactHTML.summary {
-                        +"Non-Trivial Loops"
-                    }
-                    ReactHTML.p {
-                        +"Sometimes loops finish after a couple of repetitions, sometimes after hundreds, and sometimes after millions."
-                    }
-                    ReactHTML.p {
-                        +"My intuition would have assumed that for a given n the k with the largest loop would be related to prime numbers."
-                    }
-                    ReactHTML.p {
-                        +"But then there's cases like 80:44 = 86940, 99:22 = 925680, 100:48 = 429660, 123:15 = 19920600 and 140:122 = 29350552"
-                    }
-                    ReactHTML.p {
-                        +"Is it chaotic? Can we know which k would give the largest result for a given n? Can we know how long it would run?"
-                    }
-                }
+
                 ReactHTML.details {
                     ReactHTML.summary {
                         +"Legend"
@@ -343,42 +226,72 @@ class About : ExternalCanvas() {
                         }
                     }
                 }
+
                 if (usingPrecalculatedResults) {
                     ReactHTML.details {
                         ReactHTML.summary {
                             +"Highest"
                         }
-                        state.decks.flatten().sortedByDescending { it.second.counter }.take(10).map { counter ->
-                            ReactHTML.p {
-                                +counter.toPrettyString()
-                            }
+
+                        HighestTable {
+                            inHighest = shuffleState.inState.decks.flatten().highest(10)
+                            outHighest = shuffleState.outState.decks.flatten().highest(10)
                         }
                     }
                 }
 
-                if (precalculatedResults.rows.isNotEmpty() && !usingPrecalculatedResults) {
+                if (!usingPrecalculatedResults) {
                     button {
                         text = "Use precalculated results instead"
                         onClick = {
                             clearInterval()
-                            state.loadFromResult(precalculatedResults)
-                            setHaveFinished(precalculatedResults.rows.sumOf { it.counters.size + 1 } + 1)
-                            setUsingPrecalculatedResults(true)
-                            draw()
+
+                            Requests.getMessage("/static/in-counters.json") {
+                                setPrecalculatedInResults(it as Result)
+                            }
+
+                            Requests.getMessage("/static/out-counters.json") {
+                                setPrecalculatedOutResults(it as Result)
+                            }
                         }
                     }
                 }
             }
 
+            button {
+                text = "Switch to ${if (inShuffle) "out" else "in"}-shuffle"
+                onClick = {
+                    setInShuffle(!inShuffle)
+                }
+            }
+
+            fun handlePrecalculatesResults(result: Result, state: State) {
+                if (result.rows.isNotEmpty()) {
+                    state.loadFromResult(result)
+                    setHaveFinished(result.rows.sumOf { it.counters.size + 1 } + 1)
+                    setUsingPrecalculatedResults(true)
+                    draw()
+                }
+            }
+
+            useEffect(inShuffle) {
+                setShowDetails(Details())
+                shuffleState.inShuffle = inShuffle
+                draw()
+            }
+
+            useEffect(precalculatedInResults) {
+                handlePrecalculatesResults(precalculatedInResults, shuffleState.inState)
+            }
+
+            useEffect(precalculatedOutResults) {
+                handlePrecalculatesResults(precalculatedOutResults, shuffleState.outState)
+            }
+
             useEffectOnce {
                 canvasElement.setDimensions()
                 addEventListener("resize" to resizeHandler)
-                draw()
                 frameId = window.requestAnimationFrame { runStep() }
-
-                Requests.getMessage("/static/counters.json") {
-                    setPrecalculatedResults(it as Result)
-                }
             }
         }
 

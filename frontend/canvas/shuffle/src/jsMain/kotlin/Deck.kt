@@ -1,8 +1,16 @@
-class Deck(var elements: List<Int>) {
+private fun new(size: Int) = (1..size).toList()
+
+private fun toModulo(inShuffle: Boolean): (Int, Int) -> Int = if (inShuffle) {
+    { i: Int, n: Int -> (i % n) }
+} else {
+    { i: Int, n: Int -> (n - (i % n)) }
+}
+
+class Deck(var elements: List<Int>, var modulo: (Int, Int) -> Int) {
     val size
         get() = elements.size
 
-    constructor(size: Int) : this((1..size).toList())
+    constructor(size: Int, inShuffle: Boolean) : this(new(size), toModulo(inShuffle))
 
     fun sorted(): Boolean {
         elements.forEachIndexed { i, e ->
@@ -18,17 +26,20 @@ class Deck(var elements: List<Int>) {
     }
 
     fun reset(size: Int) {
-        val new = Deck(size)
-        elements = new.elements
+        elements = new(size)
     }
 
     fun sort() = reset(size)
 
-    fun pile(n: Int) {
-        val builder = Array<Int?>(size + n) { null }
+    fun setModulo(inShuffle: Boolean) {
+        modulo = toModulo(inShuffle)
+    }
+
+    fun pile(piles: Int) {
+        val builder = Array<Int?>(size + piles) { null }
 
         elements.forEachIndexed { i, e ->
-            builder[(i % n) * ((size + n) / n) + i / n] = e
+            builder[modulo(i, piles) * ((size + piles) / piles) + i / piles] = e
         }
 
         elements = builder.filterNotNull().toList()
@@ -50,5 +61,19 @@ class Deck(var elements: List<Int>) {
         return true
     }
 
-    override fun toString(): String = elements.joinToString(",", "{", "}")
+    fun pilesString(piles: Int): String {
+        val builder: List<MutableList<Int>> = Array<MutableList<Int>>(piles) {
+            mutableListOf()
+        }.toList()
+
+        elements.forEachIndexed { i, e ->
+            builder[i % piles].add(e)
+        }
+
+        return builder.mapIndexed { index, list -> index to list }.joinToString(", ") { (index, list) ->
+            "Pile${index + 1}:${list.joinToString(", ", "[", "]")}"
+        }
+    }
+
+    override fun toString(): String = "Deck:${elements.joinToString(", ", "[", "]")}"
 }
