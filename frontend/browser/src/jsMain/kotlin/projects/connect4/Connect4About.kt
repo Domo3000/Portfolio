@@ -4,6 +4,7 @@ import react.FC
 import react.Props
 import web.window.WindowTarget
 import react.dom.html.ReactHTML
+import utils.Github
 
 val About = FC<Props> {
     ReactHTML.div {
@@ -25,7 +26,7 @@ val About = FC<Props> {
             }
             ReactHTML.p {
                 ReactHTML.a {
-                    href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/connect4/ai/length/LengthAI.kt"
+                    href = Github.link("blob/main/server/src/main/kotlin/connect4/ai/length/LengthAI.kt")
                     target = WindowTarget._blank
                     +"Source Code"
                 }
@@ -40,7 +41,7 @@ val About = FC<Props> {
             }
             ReactHTML.p {
                 ReactHTML.a {
-                    href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/connect4/ai/monte/MonteCarloAI.kt"
+                    href = Github.link("blob/main/server/src/main/kotlin/connect4/ai/monte/MonteCarloAI.kt")
                     target = WindowTarget._blank
                     +"Source Code"
                 }
@@ -58,7 +59,7 @@ val About = FC<Props> {
             }
             ReactHTML.p {
                 ReactHTML.a {
-                    href = "https://github.com/Domo3000/Portfolio/tree/main/server/src/main/kotlin/connect4/ai/neural"
+                    href = Github.link("tree/main/server/src/main/kotlin/connect4/ai/neural")
                     target = WindowTarget._blank
                     +"Source Code"
                 }

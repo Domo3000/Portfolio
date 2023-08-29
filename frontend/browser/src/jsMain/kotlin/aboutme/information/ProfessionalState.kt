@@ -16,7 +16,7 @@ val ProfessionalState = FC<Props> {
     ReactHTML.p {
         +"Currently working as a consultant for "
         ReactHTML.a {
-            href = "https://www.openvalue.eu/"
+            href = "https://www.openvalue.at/"
             target = WindowTarget._blank
             +"OpenValue"
         }

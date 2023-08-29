@@ -7,6 +7,7 @@ import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h3
 import react.dom.html.ReactHTML.p
+import utils.Github
 
 val CSSComponent = FC<Props> {
     div {
@@ -17,13 +18,13 @@ val CSSComponent = FC<Props> {
         p {
             +"The "
             a {
-                href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/Application.kt"
+                href = Github.link("blob/main/server/src/main/kotlin/Application.kt")
                 target = WindowTarget._blank
                 +"Backend server"
             }
             +" generates the "
             a {
-                href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/data/Styles.kt"
+                href = Github.link("blob/main/server/src/main/kotlin/data/Styles.kt")
                 target = WindowTarget._blank
                 +"styles.css"
             }
@@ -76,7 +77,7 @@ val CSSComponent = FC<Props> {
         p {
             +"This is mostly used for Media Queries on "
             a {
-                href = "https://github.com/Domo3000/Portfolio/blob/main/shared/js/src/main/kotlin/css/ClassNames.kt"
+                href = Github.link("blob/main/frontend/src/jsMain/kotlin/css/ClassNames.kt")
                 target = WindowTarget._blank
                 +"ClassNames"
             }
@@ -204,7 +205,7 @@ val CSSComponent = FC<Props> {
 
         p {
             a {
-                href = "https://github.com/Domo3000/Portfolio/blob/main/shared/js/src/main/kotlin/css/Classes.kt"
+                href = Github.link("blob/main/frontend/src/jsMain/kotlin/css/Classes.kt")
                 target = WindowTarget._blank
                 +"Styles"
             }

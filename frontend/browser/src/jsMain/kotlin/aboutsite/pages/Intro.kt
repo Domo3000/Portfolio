@@ -15,6 +15,7 @@ import react.dom.html.ReactHTML.p
 import react.dom.html.ReactHTML.strong
 import react.dom.html.ReactHTML.summary
 import react.dom.html.ReactHTML.ul
+import utils.Github
 
 external interface ListProps : Props {
     var page: SubMenu
@@ -52,7 +53,7 @@ val IntroComponent = FC<Props> {
         p {
             +"Source code is available on "
             a {
-                href = "https://github.com/Domo3000/Portfolio"
+                href = Github.link("")
                 target = WindowTarget._blank
                 +"Github"
             }

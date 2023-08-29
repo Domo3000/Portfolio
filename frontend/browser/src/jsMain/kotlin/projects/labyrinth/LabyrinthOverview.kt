@@ -5,6 +5,8 @@ import projects.externalCanvas
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML
+import utils.Github
+import web.window.WindowTarget
 
 object LabyrinthOverview : ProjectOverview() {
     override val header = "Labyrinth"
@@ -17,6 +19,13 @@ object LabyrinthOverview : ProjectOverview() {
     override val implementationPage: FC<Props>
         get() = FC {
             ReactHTML.div {
+                ReactHTML.p {
+                    ReactHTML.a {
+                        href = Github.link("tree/main/frontend/canvas/labyrinth")
+                        target = WindowTarget._blank
+                        +"Source Code"
+                    }
+                }
                 +"TODO link to Open Source Code of the Mobile Game once it's released"
             }
         }

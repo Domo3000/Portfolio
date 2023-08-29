@@ -6,6 +6,7 @@ import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h3
 import react.dom.html.ReactHTML.p
+import utils.Github
 import web.window.WindowTarget
 
 val FrontendComponent = FC<Props> {
@@ -27,7 +28,7 @@ val FrontendComponent = FC<Props> {
             }
             +" and the main entry point is the "
             a {
-                href = "https://github.com/Domo3000/Portfolio/tree/main/browser"
+                href = Github.link("tree/main/frontend/browser")
                 target = WindowTarget._blank
                 +"browser"
             }
@@ -41,14 +42,14 @@ val FrontendComponent = FC<Props> {
         p {
             +"To connect other .js files with this React App the "
             a {
-                href = "https://github.com/Domo3000/Portfolio/blob/main/canvas/src/main/kotlin/canvas/ExternalCanvas.kt"
+                href = Github.link("blob/main/frontend/canvas/src/jsMain/kotlin/canvas/ExternalCanvas.kt")
                 target = WindowTarget._blank
                 +"ExternalCanvas"
             }
             +" class sets up EventListeners. The Events get dispatched by "
             a {
-                href =
-                    "https://github.com/Domo3000/Portfolio/blob/main/browser/src/main/kotlin/projects/ProjectOverview.kt"
+                href = Github.link("blob/main/frontend/browser/src/jsMain/kotlin/projects/ProjectOverview.kt")
+                target = WindowTarget._blank
                 +"ProjectOverview.externalCanvas(name: String)"
             }
             +"."

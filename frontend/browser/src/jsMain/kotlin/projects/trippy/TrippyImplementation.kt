@@ -2,13 +2,23 @@ package projects.trippy
 
 import react.FC
 import react.Props
+import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.p
 import react.dom.html.ReactHTML.summary
+import utils.Github
+import web.window.WindowTarget
 
 val Implementation = FC<Props> {
     div {
+        ReactHTML.p {
+            ReactHTML.a {
+                href = Github.link("tree/main/frontend/canvas/automaton/src/jsMain/kotlin/trippy")
+                target = WindowTarget._blank
+                +"Source Code"
+            }
+        }
         +"TODO talk about optimization attempts"
     }
     details {

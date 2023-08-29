@@ -11,6 +11,7 @@ import react.dom.html.ReactHTML.li
 import react.dom.html.ReactHTML.p
 import react.dom.html.ReactHTML.summary
 import react.dom.html.ReactHTML.ul
+import utils.Github
 
 val Implementation = FC<Props> {
     div {
@@ -19,7 +20,7 @@ val Implementation = FC<Props> {
         }
         ReactHTML.p {
             ReactHTML.a {
-                href = "https://github.com/Domo3000/Portfolio/tree/main/canvas/kdtree/src/main/kotlin"
+                href = Github.link("tree/main/frontend/canvas/kdtree")
                 target = WindowTarget._blank
                 +"Source Code"
             }
@@ -51,8 +52,8 @@ val Implementation = FC<Props> {
                 li {
                     +"Play/About/Implementation layout "
                     a {
-                        href =
-                            "https://github.com/Domo3000/Portfolio/blob/main/browser/src/main/kotlin/projects/ProjectOverview.kt"
+                        href = Github.link("blob/main/frontend/browser/src/jsMain/kotlin/projects/ProjectOverview.kt")
+                        target = WindowTarget._blank
                         +"abstraction"
                     }
                     +" to be used for all projects"
@@ -60,8 +61,8 @@ val Implementation = FC<Props> {
                 li {
                     +"Helper functions for "
                     a {
-                        href =
-                            "https://github.com/Domo3000/Portfolio/blob/main/canvas/src/main/kotlin/canvas/utils.kt"
+                        href = Github.link("blob/main/frontend/canvas/src/jsMain/kotlin/canvas/utils.kt")
+                        target = WindowTarget._blank
                         +"Canvas Elements"
                     }
                 }

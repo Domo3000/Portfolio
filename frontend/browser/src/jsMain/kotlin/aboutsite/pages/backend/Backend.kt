@@ -11,6 +11,7 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h3
 import react.dom.html.ReactHTML.p
 import react.dom.html.ReactHTML.summary
+import utils.Github
 
 val BackendComponent = FC<Props> {
     div {
@@ -25,7 +26,7 @@ val BackendComponent = FC<Props> {
         p {
             +"A small "
             a {
-                href = "https://github.com/Domo3000/Portfolio/tree/main/server/src/main/kotlin"
+                href = Github.link("tree/main/server")
                 target = WindowTarget._blank
                 +"server"
             }
@@ -53,7 +54,7 @@ val BackendComponent = FC<Props> {
                 }
                 +"  project trains "
                 a {
-                    href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/connect4/ai/neural"
+                    href = Github.link("tree/main/server/src/main/kotlin/connect4/ai/neural")
                     target = WindowTarget._blank
                     +"Neural Networks"
                 }
@@ -67,13 +68,13 @@ val BackendComponent = FC<Props> {
             p {
                 +"The Connect4 project uses "
                 a {
-                    href = "https://github.com/Domo3000/Portfolio/blob/main/server/src/main/kotlin/connect4/Connect4SocketHandler.kt"
+                    href = Github.link("blob/main/server/src/main/kotlin/connect4/Connect4SocketHandler.kt")
                     target = WindowTarget._blank
                     +"Websockets"
                 }
                 +" to communicate with the "
                 a {
-                    href = "https://github.com/Domo3000/Portfolio/blob/main/connect4/src/main/kotlin/util/SocketClient.kt"
+                    href = Github.link("blob/main/frontend/canvas/connect4/src/jsMain/kotlin/util/SocketClient.kt")
                     target = WindowTarget._blank
                     +"Frontend"
                 }

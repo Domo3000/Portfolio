@@ -4,6 +4,7 @@ import react.FC
 import react.Props
 import web.window.WindowTarget
 import react.dom.html.ReactHTML
+import utils.Github
 
 val Implementation = FC<Props> {
     ReactHTML.div {
@@ -12,7 +13,7 @@ val Implementation = FC<Props> {
         }
         ReactHTML.p {
             ReactHTML.a {
-                href = "https://github.com/Domo3000/Portfolio/tree/main/canvas/automaton/src/main/kotlin/automaton"
+                href = Github.link("tree/main/frontend/canvas/automaton")
                 target = WindowTarget._blank
                 +"Source Code"
             }

@@ -4,6 +4,7 @@ import react.FC
 import react.Props
 import web.window.WindowTarget
 import react.dom.html.ReactHTML
+import utils.Github
 
 val Implementation = FC<Props> {
     ReactHTML.h4 { // TODO style guide -> what looks better, strong or h4?
@@ -11,21 +12,21 @@ val Implementation = FC<Props> {
     }
     ReactHTML.p {
         ReactHTML.a {
-            href = "https://github.com/Domo3000/Portfolio/tree/main/shared-connect4/src/commonMain/kotlin"
+            href = Github.link("tree/main/shared/connect4")
             target = WindowTarget._blank
             +"Common Source Code"
         }
     }
     ReactHTML.p {
         ReactHTML.a {
-            href = "https://github.com/Domo3000/Portfolio/tree/main/connect4/src/main/kotlin"
+            href = Github.link("tree/main/frontend/canvas/connect4")
             target = WindowTarget._blank
             +"Frontend Source Code"
         }
     }
     ReactHTML.p {
         ReactHTML.a {
-            href = "https://github.com/Domo3000/Portfolio/tree/main/server/src/main/kotlin/connect4"
+            href = Github.link("tree/main/server/src/main/kotlin/connect4")
             target = WindowTarget._blank
             +"Backend Source Code"
         }
