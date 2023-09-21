@@ -1,5 +1,6 @@
 import connect4.Connect4ConnectionHandler
 import connect4.Connect4GameHandler
+import connect4.installConnect4Websocket
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -113,6 +114,7 @@ private fun Application.body(debug: Boolean) {
                     }
                 }
                 installRouting()
+                installConnect4Websocket()
             }
         }
     }

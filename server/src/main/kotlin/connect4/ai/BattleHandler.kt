@@ -2,47 +2,75 @@ package connect4.ai
 
 import connect4.game.Connect4Game
 import connect4.game.Player
+import kotlinx.coroutines.*
 
 class BattleCounter(
     val ai: AI,
-    var gamesPlayed: Int = 0,
-    var gamesWon: Int = 0
+    var maxScore: Int = 0,
+    var score: Int = 0
 )
 
 class BattleHandler(players: List<AI>) {
-    val counters = players.map { BattleCounter(it) }
+    val counters = players.map { BattleCounter(it) }.toMutableList()
 
-    private fun leastPlayed(): BattleCounter =
-        counters.minBy { it.gamesPlayed }
-
-    private fun handleResult(counter: BattleCounter, player: Player, winner: Player?) {
-        counter.gamesPlayed++
+    private fun handleResult(counter: BattleCounter, player: Player, winner: Player?, score: Int) {
+        counter.maxScore += score
         if (player == winner) {
-            counter.gamesWon++
+            counter.score += score
         }
     }
 
-    private fun fight(counter: BattleCounter, opponent: AI) {
-        val resultP1 = Connect4Game.runGame(counter.ai, opponent)
-        handleResult(counter, Player.FirstPlayer, resultP1.first)
-        val resultP2 = Connect4Game.runGame(opponent, counter.ai)
-        handleResult(counter, Player.SecondPlayer, resultP2.first)
+    private fun fight(counter: BattleCounter, opponent: () -> AI, score: Int) {
+        val resultP1 = Connect4Game.runGame(counter.ai, opponent())
+        handleResult(counter, Player.FirstPlayer, resultP1.first, score)
+        val resultP2 = Connect4Game.runGame(opponent(), counter.ai)
+        handleResult(counter, Player.SecondPlayer, resultP2.first, score)
     }
 
-    fun battleLeastPlayed(
-        opponents: List<AI> = AIs.highAIs.map { it() }
+    fun battleScored(
+        players: List<Triple<() -> AI, Int, Int>>,
+        ai: BattleCounter
     ) {
-        opponents.forEach { opponent ->
-            fight(leastPlayed(), opponent)
+        players.forEach { (opponent, score, repeat) ->
+            repeat(repeat) {
+                fight(ai, opponent, score)
+            }
         }
     }
 
-    fun battle(
-        opponents: List<AI> = AIs.highAIs.map { it() }
+    fun singleBattle(
+        opponent: () -> AI,
+        ai: BattleCounter
     ) {
-        opponents.forEach { opponent ->
-            counters.forEach { counter ->
-                fight(counter, opponent)
+        battleScored(listOf(Triple(opponent, 1, 1)), ai)
+    }
+
+    fun singleOpponentBattle(
+        opponent: () -> AI
+    ) {
+        counters.forEach { counter ->
+            fight(counter, opponent, 1)
+        }
+    }
+
+    fun chunkedSingleOpponentBattle(
+        opponent: () -> AI,
+        repeat: Int,
+        chunkSize: Int,
+        callback: (AI) -> Unit = {}
+    ) {
+        println(opponent().name)
+
+        runBlocking {
+            counters.shuffled().chunked(chunkSize).map { aiChunk ->
+                aiChunk.map { counter ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        repeat(repeat) {
+                            fight(counter, opponent, 1)
+                        }
+                    }
+                }.awaitAll()
+                callback(aiChunk.maxBy { it.score }.ai)
             }
         }
     }
@@ -50,26 +78,31 @@ class BattleHandler(players: List<AI>) {
     fun currentScore(printAll: Boolean = true, printHighest: Boolean = true) {
         if (printAll) {
             println("Score")
-            counters.sortedByDescending { it.gamesWon }.forEach {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.name}")
+            counters.sortedByDescending { it.score }.forEach {
+                println("${it.score}/${it.maxScore}: ${it.ai.name}")
             }
         }
         if (printHighest) {
             println("Highest:")
-            counters.maxBy { it.gamesWon }.let {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.name}")
+            counters.maxBy { it.score }.let {
+                println("${it.score}/${it.maxScore}: ${it.ai.name}")
             }
         }
     }
 
     fun resetBattles() {
         counters.forEach {
-            it.gamesWon = 0
-            it.gamesPlayed = 0
+            it.score = 0
+            it.maxScore = 0
         }
     }
 
-    fun highest(): AI = counters.maxBy { it.gamesWon }.ai
+    fun highest(): BattleCounter = counters.maxBy { it.score }
 
-    fun highestRanking(amount: Int): List<AI> = counters.sortedByDescending { it.gamesWon }.map { it.ai }.take(amount)
+    fun highestRanking(amount: Int): List<AI> = counters.sortedByDescending { it.score }.map { it.ai }.take(amount)
+
+    fun purgeWeakest() {
+        counters.sortByDescending { it.score }
+        counters.removeLastOrNull()
+    }
 }

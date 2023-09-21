@@ -1,19 +1,27 @@
 package connect4.ai.length
 
 import connect4.ai.AI
+import connect4.game.Connect4Game
 import connect4.game.Player
 import connect4.game.sizeY
+import java.time.Instant
+import kotlin.random.Random
 
 data class Position(val row: Int, val column: Int)
 
 data class Score(val points: Int, val column: Int)
 
-fun List<Score>.randomHighest() = groupBy { it.points }.maxByOrNull { it.key }?.let { (_, entries) ->
-    entries.random()
-}
+fun List<Score>.highest(): List<Score> = groupBy { it.points }.maxByOrNull { it.key }?.let { (_, entries) ->
+    entries
+} ?: emptyList()
 
-abstract class LengthAI : AI() {
-    override val name: String = javaClass.simpleName
+fun List<Score>.randomHighest(random: Random): Score? = highest().randomOrNull(random)
+
+abstract class LengthAI(seed: Long?) : AI() {
+    abstract val ply: Boolean
+    override val name
+        get() = "${if(ply) "Ply" else ""}${javaClass.simpleName}"
+    protected val random = Random(seed ?: Instant.now().toEpochMilli())
 
     private fun checkRecursively(
         element: Position,
@@ -22,7 +30,7 @@ abstract class LengthAI : AI() {
         offset: Position
     ): Pair<Int, Int> {
         val next = Position(element.row + offset.row, element.column + offset.column)
-        return if(positions.containsKey(next)) {
+        return if (positions.containsKey(next)) {
             positions[next]?.let {
                 if (it == player) {
                     val nextStep = checkRecursively(next, positions, player, offset)
@@ -47,6 +55,16 @@ abstract class LengthAI : AI() {
 
             Position(row, column)
         }
+
+    private fun nextHighestOpponentScore(column: Int, field: List<List<Player?>>, player: Player): Int {
+        val game = Connect4Game(field, player)
+        game.makeMove(column)
+        return if (game.availableColumns.contains(column)) {
+            getScoresForPlayer(game.field, listOf(column), game.currentPlayer).randomHighest(random)?.points ?: 0
+        } else {
+            0
+        }
+    }
 
     private fun getScores(highestColumns: List<Position>, positions: Map<Position, Player?>, player: Player) =
         highestColumns.mapNotNull { position ->
@@ -93,62 +111,70 @@ abstract class LengthAI : AI() {
         return getScores(highestColumns, playerPositions, player)
     }
 
-    fun getHighestForPlayer(
-        field: List<List<Player?>>,
-        availableColumns: List<Int>,
-        player: Player
-    ): Score? = getScoresForPlayer(field, availableColumns, player).randomHighest()
+    private fun filterLosses(score: Score, field: List<List<Player?>>, player: Player) =
+        if (ply && score.points < 4 && nextHighestOpponentScore(score.column, field, player) >= 4) {
+            Score(-1, score.column)
+        } else {
+            score
+        }
+
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
-        val mine = getHighestForPlayer(field, availableColumns, player)
-        val opponent = getHighestForPlayer(field, availableColumns, player.switch())
+        val mine = getScoresForPlayer(field, availableColumns, player)
+            .map { filterLosses(it, field, player) }
+        val opponent = getScoresForPlayer(field, availableColumns, player.switch())
+            .map { filterLosses(it, field, player) }
 
-        mine ?: run {
-            return opponent?.column ?: availableColumns[availableColumns.size / 2]
-        }
-
-        opponent ?: run {
-            return mine.column
-        }
-
-        return decision(mine, opponent, availableColumns)
+        return decide(mine, opponent, availableColumns)
     }
 
-    abstract fun decision(mine: Score, opponent: Score, availableColumns: List<Int>): Int
+    private fun decide(mine: List<Score>, opponent: List<Score>, availableColumns: List<Int>): Int {
+        val myHighestScore = mine.randomHighest(random)
+        val opponentHighestScore = opponent.randomHighest(random)
+
+        return when {
+            mine.isEmpty() -> opponentHighestScore?.column ?: availableColumns.random(random)
+            opponent.isEmpty() -> myHighestScore!!.column
+            myHighestScore!!.points >= 4 -> myHighestScore.column
+            opponentHighestScore!!.points >= 4 -> opponentHighestScore.column
+            else -> decision(mine, opponent)
+        }
+    }
+
+    abstract fun decision(mine: List<Score>, opponent: List<Score>): Int
 }
 
-class BalancedLengthAI : LengthAI() {
-    override fun decision(mine: Score, opponent: Score, availableColumns: List<Int>): Int = when {
-        opponent.points < 2 && mine.points < 2 -> availableColumns[availableColumns.size / 2]
-        mine.points > opponent.points -> mine.column
-        else -> opponent.column
+class BalancedLengthAI(override val ply: Boolean, seed: Long?) : LengthAI(seed) {
+    override fun decision(mine: List<Score>, opponent: List<Score>): Int {
+        val myHighest = mine.randomHighest(random)!!
+        val opponentHighest = opponent.randomHighest(random)!!
+
+        return when {
+            opponentHighest.points < 2 && myHighest.points < 2 -> mine[mine.size / 2].column
+            myHighest.points >= opponentHighest.points -> myHighest.column
+            else -> opponentHighest.column
+        }
     }
 }
 
-class SimpleLengthAI : LengthAI() {
-    override fun decision(mine: Score, opponent: Score, availableColumns: List<Int>): Int =
-        if (mine.points >= opponent.points) {
-            mine.column
-        } else {
-            opponent.column
+class SimpleLengthAI(override val ply: Boolean, seed: Long?) : LengthAI(seed) {
+    override fun decision(mine: List<Score>, opponent: List<Score>): Int {
+        val myHighest = mine.randomHighest(random)!!
+        val opponentHighest = opponent.randomHighest(random)!!
+
+        return when {
+            myHighest.points >= opponentHighest.points -> myHighest.column
+            else -> opponentHighest.column
         }
+    }
 }
 
-class DumbLengthAI : LengthAI() {
-    override fun decision(mine: Score, opponent: Score, availableColumns: List<Int>): Int =
-        if (mine.points >= opponent.points) {
-            opponent.column
-        } else {
-            mine.column
-        }
+class AggressiveLengthAI(override val ply: Boolean = false, seed: Long?) : LengthAI(seed) {
+    override fun decision(mine: List<Score>, opponent: List<Score>): Int =
+        mine.randomHighest(random)!!.column
 }
 
-class AggressiveLengthAI : LengthAI() {
-    override fun decision(mine: Score, opponent: Score, availableColumns: List<Int>): Int =
-        mine.column
-}
-
-class DefensiveLengthAI : LengthAI() {
-    override fun decision(mine: Score, opponent: Score, availableColumns: List<Int>): Int =
-        opponent.column
+class DefensiveLengthAI(override val ply: Boolean = false, seed: Long?) : LengthAI(seed) {
+    override fun decision(mine: List<Score>, opponent: List<Score>): Int =
+        opponent.randomHighest(random)!!.column
 }

@@ -1,13 +1,12 @@
 package connect4.ai.neural
 
 import connect4.ai.AI
-import connect4.ai.AIs
 import connect4.game.Connect4Game
-import connect4.game.Player
 import kotlinx.coroutines.*
 import java.time.Instant
 import kotlin.random.Random
 
+// TODO test
 fun List<Move>.repeatLastMoves(): List<Move> {
     return if (size >= 2) {
         this + takeLast(size / 2).repeatLastMoves()
@@ -16,6 +15,8 @@ fun List<Move>.repeatLastMoves(): List<Move> {
     }
 }
 
+// TODO test
+// also TODO: boolean flag to include all winningMoves
 fun getTrainingMoves(players: List<() -> AI>): List<Move> {
     val winningMoves = players.map { p1 ->
         players.mapNotNull { p2 ->
@@ -34,23 +35,6 @@ fun getTrainingMoves(players: List<() -> AI>): List<Move> {
         moves.map { m ->
             val move = Move(game.field.map { it.toList() }, m)
 
-            /*
-            val allWMoves = game.availableColumns.map { column ->
-                val maybeWinningGame = Connect4Game(game.field, game.currentPlayer)
-                maybeWinningGame.makeMove(column)
-                if (maybeWinningGame.hasFinished()) {
-                    Move(game.field.map { it.toList() }, column)
-                } else {
-                    null
-                }
-            } + if (game.currentPlayer == player) {
-                move
-            } else {
-                null
-            }
-
-             */
-
             val playerMoves = if (game.currentPlayer == player) {
                 listOf(move)
             } else {
@@ -64,136 +48,102 @@ fun getTrainingMoves(players: List<() -> AI>): List<Move> {
     }.flatten()
 }
 
-class NeuralCounter(
-    val ai: RandomNeuralAI,
-    var trained: Int = 0,
-    var gamesPlayed: Int = 0,
-    var gamesWon: Int = 0
-)
+object NeuralTrainer {
+    fun train(toTrain: List<RandomNeuralAI>, trainingMoves: List<Move>) {
+        val chunks = toTrain.shuffled().chunked(5)
 
-class EvolutionHandler {
-    private val neurals = mutableListOf<NeuralCounter>()
-
-    fun allNeurals(): List<NeuralCounter> = neurals.toList()
-
-    private fun leastTrained(): NeuralCounter =
-        neurals.minBy { it.trained }
-
-    private fun leastPlayed(): NeuralCounter =
-        neurals.minBy { it.gamesPlayed }
-
-    fun highestRanking(amount: Int): List<NeuralCounter> =
-        neurals.sortedByDescending { it.gamesWon }.take(amount)
-
-    fun train(toTrain: List<NeuralCounter> = emptyList(), trainingMoves: List<Move>) {
-        if (toTrain.isEmpty()) {
-            val counter = leastTrained()
-            counter.ai.train(trainingMoves)
-            counter.trained++
-        } else {
-            val chunks = toTrain.shuffled().chunked(5)
-
-            chunks.map { trainees ->
-                runBlocking {
-                    trainees.map { counter ->
-                        CoroutineScope(Dispatchers.Default).async {
-                            if (counter.ai.train(trainingMoves)) {
-                                counter.trained++
-                            } else {
-                                neurals -= counter
-                            }
-                        }
-                    }.awaitAll()
-                }
+        chunks.map { trainees ->
+            runBlocking {
+                trainees.map { ai ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        ai.train(trainingMoves)
+                    }
+                }.awaitAll()
             }
         }
     }
+}
 
-    private fun handleResult(counter: NeuralCounter, player: Player, winner: Player?, score: Int) {
-        counter.gamesPlayed++
-        if (player == winner) {
-            counter.gamesWon += score
-        }
-    }
+class EvolutionHandler(private val random: Random = Random(Instant.now().toEpochMilli())) {
+    private val neurals = mutableListOf<RandomNeuralAI>()
 
-    private fun singleBattle(counter: NeuralCounter, opponent: AI, score: Int = 1) {
-        val resultP1 = Connect4Game.runGame(counter.ai, opponent)
-        handleResult(counter, Player.FirstPlayer, resultP1.first, score)
-        val resultP2 = Connect4Game.runGame(opponent, counter.ai)
-        handleResult(counter, Player.SecondPlayer, resultP2.first, score)
-    }
+    fun allNeurals(): List<RandomNeuralAI> = neurals.toList()
 
-    fun battle(
-        players: List<() -> AI> = AIs.highAIs,
-        ai: NeuralCounter = leastPlayed()
-    ) {
-        players.forEach { opponent ->
-            singleBattle(ai, opponent())
-        }
-    }
+    fun train(toTrain: List<RandomNeuralAI>, trainingMoves: List<Move>) {
+        val chunks = toTrain.shuffled().chunked(5)
 
-    fun battleScored(
-        players: List<Triple<() -> AI, Int, Int>>,
-        ai: NeuralCounter = leastPlayed()
-    ) {
-        players.forEach { (opponent, score, repeat) ->
-            repeat(repeat) {
-                singleBattle(ai, opponent(), score)
+        chunks.map { trainees ->
+            runBlocking {
+                trainees.map { ai ->
+                    CoroutineScope(Dispatchers.Default).async {
+                        if (!ai.train(trainingMoves)) {
+                            neurals -= ai
+                        }
+                    }
+                }.awaitAll()
             }
         }
     }
 
     fun softEvolve(
         toEvolve: RandomNeuralAI,
-        training: List<Move> = emptyList()
     ) {
-        val before = neurals.toList()
+        println("Creating from softEvolve:")
 
-        val new = listOf(
-            { toEvolve.copy(training, input = !toEvolve.inputSingular, conv = toEvolve.convLayer.map { it.softRandomize() }) },
+        /*
+        listOf(
+            {
+                toEvolve.copy(
+                    training,
+                    inputSingular = !toEvolve.inputSingular,
+                    conv = toEvolve.convLayer.map { it.softRandomize() })
+            },
             { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }) },
-            { toEvolve.copy(training, input = !toEvolve.inputSingular, dense = toEvolve.denseLayer.map { it.softRandomize() }) },
+            {
+                toEvolve.copy(
+                    training,
+                    inputSingular = !toEvolve.inputSingular,
+                    dense = toEvolve.denseLayer.map { it.softRandomize() })
+            },
             { toEvolve.copy(training, dense = toEvolve.denseLayer.map { it.softRandomize() }) },
-            { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.softRandomize() }, dense = toEvolve.denseLayer.map { it.softRandomize() }) }
+            {
+                toEvolve.copy(
+                    training,
+                    conv = toEvolve.convLayer.map { it.softRandomize() },
+                    dense = toEvolve.denseLayer.map { it.softRandomize() })
+            }
         ).mapNotNull {
             try {
                 it()
             } catch (_: Exception) {
                 null
             }
+        }.forEach {
+            neurals += it
+            println(it.info())
         }
 
-        new.forEach { evolved ->
-            neurals += NeuralCounter(evolved)
-        }
-
-        val after = neurals.toList()
-
-        println("Created from softEvolve:")
-        after.filterNot { before.contains(it) }.forEach {
-            println(it.ai.info())
-        }
+         */
     }
 
     fun evolve(
         toEvolve: RandomNeuralAI,
-        training: List<Move> = emptyList()
     ) {
-        val before = neurals.toList()
+        println("Creating from evolving:")
 
-        val new = listOf(
-            { toEvolve.copy(training, input = !toEvolve.inputSingular) },
+        /*
+        listOf(
+            { toEvolve.copy(training, inputSingular = !toEvolve.inputSingular) },
             { toEvolve.copy(training, conv = toEvolve.convLayer.map { it.randomize() }) },
             { toEvolve.copy(training, dense = toEvolve.denseLayer.map { it.randomize() }) },
-            { toEvolve.copy(training, output = NeuralAIFactory.randomDenseLayer(7)) },
+            { toEvolve.copy(training, output = LayerFactory.randomDenseLayer(7)) },
             { toEvolve.copy(training, conv = null) },
             { toEvolve.copy(training, dense = null) },
             {
                 toEvolve.copy(
-                    training,
                     conv = toEvolve.convLayer.map { it.randomize() },
                     dense = toEvolve.denseLayer.map { it.randomize() },
-                    output =  NeuralAIFactory.randomDenseLayer(7)
+                    output = LayerFactory.randomDenseLayer(7)
                 )
             }
         ).mapNotNull {
@@ -202,83 +152,53 @@ class EvolutionHandler {
             } catch (_: Exception) {
                 null
             }
+        }.forEach {
+            neurals += it
+            println(it.info())
         }
 
-        new.forEach { evolved ->
-            neurals += NeuralCounter(evolved)
-        }
-
-        val after = neurals.toList()
-
-        println("Created from evolving:")
-        after.filterNot { before.contains(it) }.forEach {
-            println(it.ai.info())
-        }
+         */
     }
 
-    fun purge(keep: Int = 30) {
-        val toKeep: List<NeuralCounter> = highestRanking(keep)
+    fun setNeurals(toKeep: List<RandomNeuralAI>) {
         neurals.clear()
         neurals += toKeep
     }
 
-    fun resetBattles() {
-        neurals.forEach {
-            it.gamesWon = 0
-            it.gamesPlayed = 0
-        }
-    }
-
-    fun currentScore(printAll: Boolean = true, printHighest: Boolean = true) {
-        if (printAll) {
-            println("Score")
-            neurals.sortedByDescending { it.gamesWon }.forEach {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
-            }
-        }
-        if (printHighest) {
-            println("Highest:")
-            neurals.maxBy { it.gamesWon }.let {
-                println("${it.gamesWon}/${it.gamesPlayed}: ${it.ai.info()}")
-            }
-        }
-    }
-
     fun initPredefinedNeurals(name: String, toGenerate: (Random) -> List<RandomNeuralAI>) {
-        val before = neurals.toList()
+        println("Initializing $name Neurals:")
 
-        val random = Random(0)
+        val new = toGenerate(random)
 
-        neurals.addAll(toGenerate(random).map { NeuralCounter(it) })
-
-        val after = neurals.toList()
+        neurals.addAll(new)
 
         println("Initialized $name Neurals:")
-        after.filterNot { before.contains(it) }.forEach {
-            println(it.ai.info())
+        new.forEach {
+            println(it.info())
         }
     }
 
     fun initWithRandom(amount: Int, trainingMoves: List<Move> = emptyList()) {
-        val random = Random(Instant.now().toEpochMilli())
-
         var i = 0
 
+        /*
         while (i < amount) {
             try {
-                val new = NeuralCounter(RandomNeuralAI(trainingMoves, random.nextBoolean()))
+                val new = RandomNeuralAI(random.nextBoolean())
                 neurals += new
-                println("generated randomly: ${new.ai.info()}")
+                println("generated randomly: ${new.info()}")
                 i++
             } catch (_: Exception) {
             }
         }
+
+         */
     }
 
     fun initFromStored(storedNeurals: List<StoredNeuralAI>) {
         storedNeurals.map { it.toRandomNeural() }.forEach {
             println("converted: ${it.info()}")
-            neurals += NeuralCounter(it)
+            neurals += it
         }
     }
 }

@@ -4,7 +4,6 @@ import connect4.ai.length.*
 import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.monte.MaximizeWinsMonteCarloAI
 import connect4.ai.monte.MinimizeLossesMonteCarloAI
-import connect4.ai.monte.MonteCarloAI
 import connect4.ai.simple.BiasedRandomAI
 import connect4.game.Connect4Player
 
@@ -13,20 +12,19 @@ abstract class AI : Connect4Player()
 object AIs {
     val simpleAIs = listOf(
         { BiasedRandomAI() },
-        { DumbLengthAI() },
-        { MaximizeWinsMonteCarloAI(200) }
+        { MaximizeWinsMonteCarloAI(200, 6L) }
     )
 
     val mediumAIs = listOf(
-        { BalancedLengthAI() },
-        { DefensiveLengthAI() },
-        { MinimizeLossesMonteCarloAI(350) }
+        { BalancedLengthAI(false, 6L) },
+        { DefensiveLengthAI(false, 6L) },
+        { MinimizeLossesMonteCarloAI(350, 6L) }
     )
 
     val highAIs = listOf(
-        { PlyLengthAI() },
-        { SimpleLengthAI() },
-        { BalancedMonteCarloAI(700) }
+        { BalancedLengthAI(true, 6L) },
+        { SimpleLengthAI(true, 6L) },
+        { BalancedMonteCarloAI(700, 6L) }
     )
 
     val allNonNeurals = simpleAIs + mediumAIs + highAIs

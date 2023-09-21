@@ -4,65 +4,54 @@ import connect4.ai.AI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import connect4.game.sizeX
+import java.time.Instant
 import kotlin.random.Random
 
-data class Counter(val wins: Int, val losses: Int, val finishedGames: Int = 1)
+enum class Result {
+    Win,
+    Loss,
+    Draw
+}
 
-class Node(private val result: Counter?, availableColumns: List<Int>) {
+private class Node(private val result: Result?, availableColumns: List<Int>, val parent: Node?) {
+    var haveFinished: Int = 0
     val children = mutableMapOf<Int, Node?>()
 
     fun isFinished(): Boolean = (result != null || children.values.all { it?.isFinished() ?: false })
 
-    fun haveFinished(): Int = if (result != null) {
-        1
-    } else {
-        children.values.sumOf {
-            it?.haveFinished() ?: 0
-        }
+    fun haveFinished(): Int = haveFinished
+
+    fun getResult(): List<Result> = result?.let { listOf(it) }
+        ?: (children.values.mapNotNull { it?.getResult() }).flatten()
+
+    fun updateFinished() {
+        haveFinished++
+        parent?.updateFinished()
     }
 
-    fun prune(random: Random) {
-        val pruned = children.map { (k, v) ->
-            if (random.nextBoolean()) {
-                k to null
-            } else {
-                v?.prune(random)
-                k to v
-            }
-        }
-        children.clear()
-        children.putAll(pruned)
-    }
-
-    fun getResult(): Counter = result
-        ?: (children.values.mapNotNull { it?.getResult() }
-            .reduceOrNull { acc, counter -> Counter(acc.wins + counter.wins, acc.losses + counter.losses) }
-            ?: Counter(0, 0))
-
-    fun runRandomRecursively(game: Connect4Game, player: Player) {
-        children.filterNot { it.value?.isFinished() ?: false }.toList().random().let { (c, n) ->
+    fun runRandomRecursively(game: Connect4Game, player: Player, random: Random) {
+        children.filterNot { it.value?.isFinished() ?: false }.toList().random(random).let { (c, n) ->
             if (game.availableColumns.contains(c)) {
                 game.makeMove(c)
 
                 if (n == null) {
-                    val result = if (game.hasFinished()) {
-                        game.result().second?.let { winner ->
+                    children[c] = if (game.hasFinished()) {
+                        updateFinished()
+                        val result = game.result().second?.let { winner ->
                             if (player == winner) {
-                                Counter(1, 0)
+                                Result.Win
                             } else {
-                                Counter(0, 1)
+                                Result.Loss
                             }
-                        } ?: Counter(0, 0)
+                        } ?: Result.Draw
+                        Node(result, emptyList(), this)
                     } else {
-                        null
+                        val new = Node(null, game.availableColumns, this)
+                        new.runRandomRecursively(game, player, random)
+                        new
                     }
-                    val new = Node(result, game.availableColumns)
-                    if (result == null) {
-                        new.runRandomRecursively(game, player)
-                    }
-                    children[c] = new
                 } else {
-                    n.runRandomRecursively(game, player)
+                    n.runRandomRecursively(game, player, random)
                 }
             } else {
                 children.remove(c)
@@ -77,62 +66,62 @@ class Node(private val result: Counter?, availableColumns: List<Int>) {
     }
 }
 
-abstract class MonteCarloAI(private val maxGames: Int) : AI() {
-    private var node = Node(null, (0 until sizeX).toList())
+abstract class MonteCarloAI(private val maxGames: Int, seed: Long?) : AI() {
+    private val random = Random(seed ?: Instant.now().toEpochMilli())
+    private var node = Node(null, (0 until sizeX).toList(), null)
 
     override val name = "MonteCarlo($maxGames)"
 
     override fun reset() {
-        node = Node(null, (0 until sizeX).toList())
+        node = Node(null, (0 until sizeX).toList(), null)
     }
 
     override fun updateMove(move: Int, availableColumns: List<Int>) {
         node.children.getOrDefault(move, null)?.let {
             node = it
         } ?: run {
-            val new = Node(null, availableColumns)
-            node.children[move] = new
-            node = new
+            node = Node(null, availableColumns, null)
         }
     }
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
         if (node.children.isEmpty() || availableColumns.size == 1) {
-            return availableColumns.random()
+            return availableColumns.random(random)
         }
 
         while (!node.isFinished() && node.children.values.filterNotNull()
                 .all { it.isFinished() || it.haveFinished() < (maxGames / availableColumns.size) }
         ) {
-            node.runRandomRecursively(Connect4Game(field, player), player)
+            node.runRandomRecursively(Connect4Game(field, player), player, random)
         }
 
         val result = node.children.filter { availableColumns.contains(it.key) }
-            .map { (key, value) -> key to (value?.getResult() ?: Counter(0, 0)) }
+            .map { (key, value) -> key to (value?.getResult() ?: emptyList()) }
 
-        result.filter { it.second.losses == 0 }.maxByOrNull { it.second.wins }?.let {
+        result.filter { r -> r.second.count { it == Result.Loss } == 0 }
+            .maxByOrNull { r -> r.second.count { it == Result.Win } }?.let {
             return it.first
         }
 
         return decision(result)
     }
 
-    abstract fun decision(results: List<Pair<Int, Counter>>): Int
+    abstract fun decision(results: List<Pair<Int, List<Result>>>): Int
 }
 
-class BalancedMonteCarloAI(max: Int) : MonteCarloAI(max) {
-    override fun decision(results: List<Pair<Int, Counter>>): Int =
-        results.maxBy { it.second.wins.toDouble() / it.second.losses.toDouble() }.first
+class BalancedMonteCarloAI(max: Int, seed: Long?) : MonteCarloAI(max, seed) {
+    override fun decision(results: List<Pair<Int, List<Result>>>): Int =
+        results.maxBy { r -> r.second.count { it == Result.Win }.toDouble() / r.second.count { it == Result.Loss }.toDouble() }.first
 }
 
-class MaximizeWinsMonteCarloAI(max: Int) : MonteCarloAI(max) {
+class MaximizeWinsMonteCarloAI(max: Int, seed: Long?) : MonteCarloAI(max, seed) {
     override val name = "MaximizeWinsMonteCarloAI($max)"
 
-    override fun decision(results: List<Pair<Int, Counter>>): Int = results.maxBy { it.second.wins.toDouble() }.first
+    override fun decision(results: List<Pair<Int, List<Result>>>): Int = results.maxBy { r -> r.second.count { it == Result.Win } }.first
 }
 
-class MinimizeLossesMonteCarloAI(max: Int) : MonteCarloAI(max) {
+class MinimizeLossesMonteCarloAI(max: Int, seed: Long?) : MonteCarloAI(max, seed) {
     override val name = "MinimizeLossesMonteCarloAI($max)"
 
-    override fun decision(results: List<Pair<Int, Counter>>): Int = results.minBy { it.second.losses.toDouble() }.first
+    override fun decision(results: List<Pair<Int, List<Result>>>): Int = results.minBy { r -> r.second.count { it == Result.Loss } }.first
 }

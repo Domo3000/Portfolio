@@ -285,7 +285,6 @@ class TrippyBenchmarks {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @Test
     fun fightBenchmark() {
         val mapTime = "mapTime" to measureTime {
@@ -330,7 +329,6 @@ class TrippyBenchmarks {
      *
      * Across various tests ImprovedMutableArray has been the fastest, nearly twice as fast as the original MapArray
      */
-    @OptIn(ExperimentalTime::class)
     @Test
     fun arrayBenchmark() {
         val dimension = 30

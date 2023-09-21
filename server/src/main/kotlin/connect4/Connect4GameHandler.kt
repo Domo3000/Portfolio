@@ -1,7 +1,7 @@
 package connect4
 
 import connect4.ai.AIs
-import connect4.ai.length.PlyLengthAI
+import connect4.ai.length.BalancedLengthAI
 import connect4.ai.monte.BalancedMonteCarloAI
 import connect4.ai.neural.MostCommonAI
 import connect4.ai.neural.OverallHighestAI
@@ -20,38 +20,26 @@ object Connect4GameHandler {
     val simpleAIs = AIs.simpleAIs
     val mediumAIs = AIs.mediumAIs
     val hardAIs = AIs.highAIs
-    val monteCarloAI = { BalancedMonteCarloAI(1001) }
-    val lengthAI = { PlyLengthAI() }
+    val monteCarloAI = { BalancedMonteCarloAI(1001, random.nextLong()) }
+    val lengthAI = { BalancedLengthAI(true, random.nextLong()) }
 
     suspend fun loadStored() {
         mutex.withLock {
-            storedHandler.loadStored()
+            storedHandler.loadStoredNeurals()
         }
     }
 
-    val allNeurals by lazy { storedHandler.allNeurals() }
-
-    val overallHighestAis by lazy {
-        listOf(Regex("[012]"), Regex("[134]"), Regex("[245]")).map { r ->
-            OverallHighestAI(storedHandler.allNeurals().filter { it.name.contains(r) } )
-        }
-    }
-
-    val mostCommonAis by lazy {
-        listOf(Regex("[167]"), Regex("[236]"), Regex("[678]")).map { r ->
-            MostCommonAI(storedHandler.allNeurals().filter { it.name.contains(r) } )
-        }
-    }
+    private val allNeurals by lazy { storedHandler.allNeurals() }
 
     suspend fun makeMove(game: Connect4Game): Int = mutex.withLock {
-        return when (random.nextInt(0, 3)) {
-            0 -> allNeurals.random()
-                .nextMoveRanked(game.field, game.availableColumns, game.currentPlayer)
-                .maxBy { it.second }.first
+         val ai = when (random.nextInt(0, 5)) {
+            0 -> allNeurals.random(random)
 
-            1 -> overallHighestAis.random().nextMove(game.field, game.availableColumns, game.currentPlayer)
+            in 1..2 -> OverallHighestAI(allNeurals.shuffled(random).take(3))
 
-            else -> mostCommonAis.random().nextMove(game.field, game.availableColumns, game.currentPlayer)
+            else -> MostCommonAI(allNeurals.shuffled(random).take(3))
         }
+
+        return ai.nextMove(game)
     }
 }

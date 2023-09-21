@@ -1,8 +1,5 @@
 package routing
 
-import connect4.Connect4ConnectionHandler
-import connect4.Connect4GameHandler
-import connect4.createConnect4Websocket
 import data.CSS
 import data.index
 import data.styles
@@ -24,9 +21,7 @@ private suspend inline fun ApplicationCall.respondCss(css: CSS) {
     this.respondText(CssBuilder().apply(css).toString(), ContentType.Text.CSS)
 }
 
-context(Connect4ConnectionHandler, Connect4GameHandler, ApplicationEnvironment)
 fun Application.installRouting() = routing {
-    createConnect4Websocket()
     get("/health") {
         call.respondText("Healthy!")
     }

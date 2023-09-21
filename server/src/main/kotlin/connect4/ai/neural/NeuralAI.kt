@@ -2,8 +2,6 @@ package connect4.ai.neural
 
 import connect4.ai.AI
 import connect4.game.Player
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.jetbrains.kotlinx.dl.api.core.SavingFormat
 import org.jetbrains.kotlinx.dl.api.core.Sequential
 import org.jetbrains.kotlinx.dl.api.core.WritingMode
@@ -18,20 +16,12 @@ import org.jetbrains.kotlinx.dl.api.core.layer.reshaping.Flatten
 import org.jetbrains.kotlinx.dl.dataset.Dataset
 import org.jetbrains.kotlinx.dl.dataset.OnHeapDataset
 import java.io.File
-
-@Serializable
-data class AdditionalInfo(
-    val input: Boolean // TODO store random.info as well
-)
-
-private val json = Json {
-    ignoreUnknownKeys = true
-    classDiscriminator = "class"
-}
+import java.time.Instant
+import kotlin.random.Random
 
 class Move(val field: List<List<Player?>>, val move: Int)
 
-fun List<List<Player?>>.toFloatArraySingular(player: Player): FloatArray {
+private fun List<List<Player?>>.toFloatArraySingular(player: Player): FloatArray {
     val x = normalize(player).flatten().map { element ->
         when (element) {
             player -> 1.0f
@@ -44,7 +34,7 @@ fun List<List<Player?>>.toFloatArraySingular(player: Player): FloatArray {
     }
 }
 
-fun List<List<Player?>>.toFloatArrayDual(player: Player): FloatArray {
+private fun List<List<Player?>>.toFloatArrayDual(player: Player): FloatArray {
     val p = normalize(player).flatten().map { element ->
         when (element) {
             player -> 1.0f
@@ -64,7 +54,7 @@ fun List<List<Player?>>.toFloatArrayDual(player: Player): FloatArray {
     }
 }
 
-fun List<List<Player?>>.normalize(player: Player): List<List<Player?>> = map {
+private fun List<List<Player?>>.normalize(player: Player): List<List<Player?>> = map {
     it.toList().map { n ->
         if (Player.FirstPlayer != player) {
             n?.switch()
@@ -93,7 +83,7 @@ fun List<Move>.toDataset(player: Player, inputSingular: Boolean): Dataset = OnHe
     }
 )
 
-fun Layer.name(): String = when (this) {
+private fun Layer.name(): String = when (this) {
     is Input -> "Input(${packedDims[2]})"
     is BatchNorm -> "BatchNorm()"
     is Dense -> "Dense($outputSize/${activation.name})"
@@ -104,21 +94,21 @@ fun Layer.name(): String = when (this) {
     else -> throw Exception("unhandled Layer")
 }
 
-abstract class NeuralAI(
-    private val inputSingular: Boolean
-) : AI() {
+private fun Sequential.isInputSingular() = this.inputDimensions[2] == 1L
+
+abstract class NeuralAI : AI() {
     abstract val brain: Sequential
 
     abstract override val name: String
 
-    val epochs = 250
+    val epochs = 10
 
     fun nextMoveRanked(
         field: List<List<Player?>>,
         availableColumns: List<Int>,
         player: Player
     ): List<Pair<Int, Float>> {
-        val floatArray = if (inputSingular) {
+        val floatArray = if (brain.isInputSingular()) {
             field.toFloatArraySingular(player)
         } else {
             field.toFloatArrayDual(player)
@@ -138,9 +128,9 @@ abstract class NeuralAI(
     fun train(list: List<Move>): Boolean {
         return try {
             brain.fit(
-                list.toDataset(Player.FirstPlayer, inputSingular),
+                list.toDataset(Player.FirstPlayer, brain.isInputSingular()),
                 epochs,
-                100
+                1000
             )
             true
         } catch (e: java.lang.Exception) {
@@ -152,11 +142,21 @@ abstract class NeuralAI(
 
     fun evaluate(list: List<Move>): Double =
         brain.evaluate(
-            list.toDataset(Player.FirstPlayer, inputSingular)
+            list.toDataset(Player.FirstPlayer, brain.isInputSingular())
         ).lossValue
 
     fun info() =
-        "$name: {${brain.layers.joinToString(", ", " ", " ") { it.name() }}}"
+        "$name: ${brain.layers.joinToString(", ", "{ ", " }") { it.name() }}"
+
+    fun shortInfo() =
+        brain.layers.mapNotNull {
+            when(it) {
+                is BatchNorm -> "BN"
+                is Dense -> "D(${it.outputSize})"
+                is Conv2D -> "C(${it.filters}(${it.kernelSize.first()}))"
+                else -> null
+            }
+        }.joinToString("-")
 
     fun store(path: String) {
         val baseDirectory = "${System.getProperty("user.dir")}/neurals"
@@ -170,23 +170,12 @@ abstract class NeuralAI(
             true,
             WritingMode.OVERRIDE,
         )
-        val additional = File("$baseDirectory/$path/additionalInfo.json")
-        if (additional.exists()) {
-            additional.delete()
-        }
-        additional.createNewFile()
-        additional.writeText(
-            json.encodeToString(
-                AdditionalInfo.serializer(),
-                AdditionalInfo(inputSingular)
-            )
-        )
     }
 }
 
 class OverallHighestAI(private val neurals: List<NeuralAI>) : AI() {
     override val name: String =
-        "OverallHighest(" + neurals.joinToString(",") { it.name.removeSurrounding("StoredNeural(", ")") } + ")"
+        "OverallHighest" + neurals.joinToString(",", "(", ")") { it.name.removeSurrounding("StoredNeural(", ")") }
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
         return neurals.map {
@@ -203,7 +192,7 @@ class OverallHighestAI(private val neurals: List<NeuralAI>) : AI() {
 
 class MostCommonAI(private val neurals: List<NeuralAI>) : AI() {
     override val name: String =
-        "MostCommon(" + neurals.joinToString(",") { it.name.removeSurrounding("StoredNeural(", ")") } + ")"
+        "MostCommon" + neurals.joinToString(",", "(", ")") { it.name.removeSurrounding("StoredNeural(", ")") }
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
         return neurals.map {
