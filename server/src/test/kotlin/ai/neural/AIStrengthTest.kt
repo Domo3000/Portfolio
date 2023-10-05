@@ -1,20 +1,21 @@
 package ai.neural
 
-import connect4.ai.AI
-import connect4.ai.BattleHandler
-import connect4.ai.length.AggressiveLengthAI
-import connect4.ai.length.BalancedLengthAI
-import connect4.ai.length.DefensiveLengthAI
-import connect4.ai.length.SimpleLengthAI
-import connect4.ai.monte.BalancedMonteCarloAI
-import connect4.ai.monte.MaximizeWinsMonteCarloAI
-import connect4.ai.monte.MinimizeLossesMonteCarloAI
-import connect4.ai.neural.*
-import connect4.ai.simple.BiasedRandomAI
-import connect4.ai.simple.RandomAI
+import ai.AI
+import ai.BattleHandler
+import ai.length.AggressiveLengthAI
+import ai.length.BalancedLengthAI
+import ai.length.DefensiveLengthAI
+import ai.length.SimpleLengthAI
+import ai.monte.BalancedMonteCarloAI
+import ai.monte.MaximizeWinsMonteCarloAI
+import ai.monte.MinimizeLossesMonteCarloAI
+import ai.simple.AlwaysSameAI
+import ai.simple.BiasedRandomAI
+import ai.simple.RandomAI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import kotlinx.coroutines.*
+import neural.*
 import org.junit.Test
 import java.time.Instant
 import kotlin.math.ceil
@@ -28,7 +29,7 @@ private fun combinations(neurals: List<NeuralAI>): List<List<NeuralAI>> {
         val remaining = neurals.filterNot { it == initial }
         remaining.forEach { remainder ->
             val two = listOf(initial, remainder)
-            //result += two
+            result += two
             val remainin = remaining.filterNot { it == remainder }
             remainin.forEach { remainde ->
                 val three = two + remainde
@@ -56,10 +57,17 @@ class AIStrengthTest {
     private val random = Random(Instant.now().toEpochMilli())
 
     private fun toEvaluate(accuracy: Int) = listOf(
+        { BiasedRandomAI(random.nextLong()) } to 100 * accuracy,
+        { DefensiveLengthAI(false, random.nextLong()) } to 100 * accuracy,
+        { DefensiveLengthAI(true, random.nextLong()) } to 100 * accuracy,
+        { AggressiveLengthAI(false, random.nextLong()) } to 100 * accuracy,
+        { AggressiveLengthAI(true, random.nextLong()) } to 100 * accuracy,
+        { BalancedLengthAI(false, random.nextLong()) } to 100 * accuracy,
         { SimpleLengthAI(false, random.nextLong()) } to 100 * accuracy,
         { BalancedLengthAI(false, random.nextLong()) } to 100 * accuracy,
         { SimpleLengthAI(true, random.nextLong()) } to 100 * accuracy,
         { BalancedLengthAI(true, random.nextLong()) } to 100 * accuracy,
+        { BalancedMonteCarloAI(300, random.nextLong()) } to 5 * accuracy,
         { BalancedMonteCarloAI(500, random.nextLong()) } to 3 * accuracy,
         { BalancedMonteCarloAI(800, random.nextLong()) } to 2 * accuracy,
         { BalancedMonteCarloAI(1000, random.nextLong()) } to 1 * accuracy
@@ -75,6 +83,7 @@ class AIStrengthTest {
 
         toEvaluate(accuracy).forEach { (opponent, repeat) ->
             println("----")
+            println(opponent().name)
             val battleHandler = BattleHandler(ais)
             battleHandler.chunkedSingleOpponentBattle(opponent, repeat, 5) {
                 println(".")
@@ -88,7 +97,7 @@ class AIStrengthTest {
 
         val sortedScores = scores.toList().sortedByDescending { it.second.average() }
 
-        if(printInfo) {
+        if (printInfo) {
             println("----")
             sortedScores.forEach { (ai, score) ->
                 println("${score.average()}: ${(ai as NeuralAI).info()}")
@@ -118,32 +127,26 @@ class AIStrengthTest {
         val handler = StoredHandler()
         handler.loadStoredNeurals()
 
-        val grouped = handler.allNeurals().map {
-            it.toRandomNeural()
-        }.groupBy { it.shortInfo() }.mapValues { (_, value) ->
-            value.toMutableList()
-        }
+        val neurals = handler.allNeurals().toMutableList()
 
         val coarse = listOf(
-            Triple(5, 0.333, false),
+            Triple(3, 0.333, false),
+            Triple(5, 0.333, true),
             Triple(10, 0.5, true),
             Triple(25, 1.0, true)
         )
 
         coarse.forEach { (accuracy, toKeep, print) ->
-            grouped.forEach {(groupName, ais) -> run {
-                println(groupName)
-                println(ais.size)
-                val scored = rateOverallChunked(ais.toList(), accuracy, print, true)
-                val keep = ceil((ais.size * toKeep)).toInt()
-                ais.clear()
-                ais.addAll(scored.take(keep).map { it as RandomNeuralAI })
-            }}
+            val scored = rateOverallChunked(neurals.toList(), accuracy, print, true)
+            val keep = ceil((neurals.size * toKeep)).toInt()
+            neurals.clear()
+            neurals.addAll(scored.take(keep).map { it as StoredNeuralAI })
         }
     }
 
     /*
-     *   only use this for very low amount of Neurals, like between 3 and 9
+     *   only use this for very low amount of Neurals
+     *   as it will create hundreds of combinations even for low number of neurals
      */
     @Test
     fun neuralAllCombinationsStrengthTest() {
@@ -220,6 +223,7 @@ class AIStrengthTest {
     @Test
     fun relativeFastAiStrength() {
         val ais = listOf(
+            { AlwaysSameAI(3) },
             { RandomAI() },
             { BiasedRandomAI() },
             { DefensiveLengthAI(false, random.nextLong()) },
@@ -279,8 +283,6 @@ class AIStrengthTest {
                 Connect4Game.runGame(neural, ai, printResult = true)
                 println("${ai.name} vs ${neural.name}")
                 Connect4Game.runGame(ai, neural, printResult = true)
-                println("${ai.name} vs ${ai.name}")
-                Connect4Game.runGame(ai, ai, printResult = true)
             }
         }
     }

@@ -1,5 +1,5 @@
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
     kotlin("jvm")
@@ -20,6 +20,8 @@ dependencies {
 
     implementation(project(":shared"))
     implementation(project(":shared:connect4"))
+    implementation(project(":shared:connect4ai"))
+    implementation(project(":shared:neural"))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.20")
 
@@ -28,10 +30,6 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-caching-headers:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-
-    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-api:0.5.1")
-    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-impl:0.5.1")
-    implementation("org.jetbrains.kotlinx:kotlin-deeplearning-tensorflow:0.5.1")
 
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.388")
     implementation("ch.qos.logback:logback-classic:1.2.11") // TODO 1.4.1

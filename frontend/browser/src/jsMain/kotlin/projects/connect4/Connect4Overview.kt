@@ -8,7 +8,7 @@ import react.Props
 object Connect4Overview : ProjectOverview() {
     override val header: String = "Connect Four"
     override val aboutPage: FC<Props>
-        get() = About
+        get() = externalCanvas("Connect4About")
     override val implementationPage: FC<Props>
         get() = Implementation
     override val playPage: FC<Props>

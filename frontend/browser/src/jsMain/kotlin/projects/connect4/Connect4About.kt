@@ -2,9 +2,9 @@ package projects.connect4
 
 import react.FC
 import react.Props
-import web.window.WindowTarget
 import react.dom.html.ReactHTML
 import utils.Github
+import web.window.WindowTarget
 
 val About = FC<Props> {
     ReactHTML.div {
@@ -55,7 +55,7 @@ val About = FC<Props> {
         }
         ReactHTML.details {
             ReactHTML.summary {
-                +"Neural Network"
+                +"Neural Networks"
             }
             ReactHTML.p {
                 ReactHTML.a {

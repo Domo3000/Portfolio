@@ -50,6 +50,9 @@ rootProject.name = "Portfolio"
 
 include(":shared")
 include(":shared:connect4")
+include(":shared:connect4ai")
+include(":shared:neural")
+include(":training")
 include(":frontend:canvas")
 include(":frontend:requests")
 include(":frontend:browser")

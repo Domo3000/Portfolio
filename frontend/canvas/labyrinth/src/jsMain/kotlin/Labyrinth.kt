@@ -1,14 +1,18 @@
+
 import canvas.*
 import css.ClassNames
 import css.Classes
-import web.cssom.*
 import emotion.react.css
 import props.Button
 import props.button
 import props.buttonRow
-import react.*
+import react.FC
+import react.Props
 import react.dom.html.ReactHTML
+import react.useEffectOnce
+import react.useState
 import web.canvas.CanvasRenderingContext2D
+import web.cssom.*
 import web.events.Event
 import web.html.HTMLCanvasElement
 import web.uievents.KeyboardEvent
@@ -384,69 +388,73 @@ class Labyrinth : ExternalCanvas() {
                 draw()
             }
 
-            button {
-                text = "Reset Level $levelState"
-                onClick = {
-                    worldState.reset()
-                    draw()
-                }
-            }
-
-            ReactHTML.canvas {
-                css(Classes.canvas)
-                id = canvasId
-            }
-
             ReactHTML.div {
-                className = ClassNames.phoneElement
-                ReactHTML.div {
-                    ReactHTML.button {
-                        css {
-                            width = 25.0.pct
-                            color = backgroundColor
-                            border = None.none
-                        }
-                    }
-                    button {
-                        text = "Up"
-                        width = 50.0
-                        onClick = {
-                            worldState.move(Directions.UP)
-                            draw()
-                        }
+                css(Classes.project)
+
+                button {
+                    text = "Reset Level $levelState"
+                    onClick = {
+                        worldState.reset()
+                        draw()
                     }
                 }
-                ReactHTML.div {
-                    css {
-                        clear = Clear.left
-                        margin = Auto.auto
-                    }
-                    buttonRow {
-                        buttons = listOf(
-                            Button("Left", false) {
-                                worldState.move(Directions.LEFT)
-                                draw()
-                            },
-                            Button("Right", false) {
-                                worldState.move(Directions.RIGHT)
-                                draw()
-                            })
-                    }
+
+                ReactHTML.canvas {
+                    css(Classes.canvas)
+                    id = canvasId
                 }
+
                 ReactHTML.div {
-                    ReactHTML.button {
-                        css {
-                            width = 25.0.pct
-                            color = backgroundColor
-                            border = None.none
+                    className = ClassNames.phoneElement
+                    ReactHTML.div {
+                        ReactHTML.button {
+                            css {
+                                width = 25.0.pct
+                                color = backgroundColor
+                                border = None.none
+                            }
+                        }
+                        button {
+                            text = "Up"
+                            width = 50.0
+                            onClick = {
+                                worldState.move(Directions.UP)
+                                draw()
+                            }
                         }
                     }
-                    button {
-                        text = "Down"
-                        width = 50.0
-                        onClick = {
-                            worldState.move(Directions.DOWN)
-                            draw()
+                    ReactHTML.div {
+                        css {
+                            clear = Clear.left
+                            margin = Auto.auto
+                        }
+                        buttonRow {
+                            buttons = listOf(
+                                Button("Left", false) {
+                                    worldState.move(Directions.LEFT)
+                                    draw()
+                                },
+                                Button("Right", false) {
+                                    worldState.move(Directions.RIGHT)
+                                    draw()
+                                })
+                        }
+                    }
+                    ReactHTML.div {
+                        ReactHTML.button {
+                            css {
+                                width = 25.0.pct
+                                color = backgroundColor
+                                border = None.none
+                            }
+                        }
+                        button {
+                            text = "Down"
+                            width = 50.0
+                            onClick = {
+                                worldState.move(Directions.DOWN)
+                                draw()
+                            }
                         }
                     }
                 }

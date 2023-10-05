@@ -4,14 +4,8 @@ import connect4.game.Player
 import connect4.game.sizeY
 import connect4.messages.*
 import css.Classes
-import web.cssom.Auto
-import web.cssom.Color
-import web.cssom.NamedColor
-import web.cssom.px
 import emotion.react.css
 import kotlinx.browser.window
-
-import web.events.Event
 import react.FC
 import react.Props
 import react.dom.events.MouseEvent
@@ -19,6 +13,9 @@ import react.dom.html.ReactHTML
 import react.useEffectOnce
 import react.useState
 import web.canvas.CanvasTextAlign
+import web.cssom.Color
+import web.cssom.NamedColor
+import web.events.Event
 import web.html.HTMLCanvasElement
 import web.uievents.KeyboardEvent
 import connect4.game.sizeX as connect4SizeX
@@ -307,10 +304,8 @@ class Connect4(host: String, port: Int, secure: Boolean) : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                css {
-                    maxWidth = 800.px
-                    margin = Auto.auto
-                }
+                css(Classes.project)
+
                 ReactHTML.canvas {
                     css(Classes.canvas)
                     id = canvasId

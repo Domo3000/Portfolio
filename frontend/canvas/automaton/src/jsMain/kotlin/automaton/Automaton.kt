@@ -6,7 +6,6 @@ import canvas.drawRectangle
 import canvas.setDimensions
 import css.ClassNames
 import css.Classes
-import web.cssom.*
 import emotion.react.css
 import kotlinx.browser.window
 import props.Button
@@ -18,6 +17,10 @@ import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.canvas
 import utils.WrappingArray
 import utils.mod
+import web.cssom.Auto
+import web.cssom.Float
+import web.cssom.pct
+import web.cssom.px
 import web.events.Event
 import kotlin.js.Date
 import kotlin.random.Random
@@ -128,10 +131,8 @@ class Automaton : ExternalCanvas() {
             }
 
             ReactHTML.div {
-                css {
-                    maxWidth = 800.px
-                    margin = Auto.auto
-                }
+                css(Classes.project)
+
                 canvas {
                     css(Classes.canvas)
                     id = canvasId

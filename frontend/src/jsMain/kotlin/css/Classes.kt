@@ -6,6 +6,11 @@ import web.cssom.*
 private typealias CSS = PropertiesBuilder.() -> Unit
 
 object Classes {
+    val project: CSS = {
+        maxWidth = 800.px
+        margin = Auto.auto
+    }
+
     val canvas: CSS = {
         width = 100.pct
         maxWidth = 1000.px

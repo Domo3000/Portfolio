@@ -1,6 +1,6 @@
 package connect4
 
-import connect4.ai.AI
+import ai.AI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import connect4.messages.*
@@ -19,7 +19,7 @@ private fun List<() -> AI>.invokeHighestVoted(game: Connect4Game) =
         .maxBy { it.second }.first
 
 context(Connect4ConnectionHandler, Connect4GameHandler)
-suspend fun makeMove(connection: Connection, game: Connect4Game, choice: AIChoice?) {
+private suspend fun makeMove(connection: Connection, game: Connect4Game, choice: AIChoice?) {
     val next = when (choice) {
         AIChoice.Simple -> simpleAIs.invokeHighestVoted(game)
         AIChoice.Medium -> mediumAIs.invokeHighestVoted(game)
@@ -39,7 +39,7 @@ suspend fun makeMove(connection: Connection, game: Connect4Game, choice: AIChoic
 
 
 context(Connect4ConnectionHandler)
-suspend fun checkFinished(connection: Connection, game: Connect4Game): Boolean {
+private suspend fun checkFinished(connection: Connection, game: Connect4Game): Boolean {
     val result = game.result()
     return if (result.first) {
         replyTo(connection.id, GameFinishedMessage(result.second))
