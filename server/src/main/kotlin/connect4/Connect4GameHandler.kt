@@ -1,13 +1,13 @@
 package connect4
 
-import ai.length.AggressiveLengthAI
-import ai.length.BalancedLengthAI
-import ai.length.DefensiveLengthAI
-import ai.length.SimpleLengthAI
-import ai.monte.BalancedMonteCarloAI
-import ai.monte.MaximizeWinsMonteCarloAI
-import ai.monte.MinimizeLossesMonteCarloAI
-import ai.simple.BiasedRandomAI
+import connect4.ai.length.AggressiveLengthAI
+import connect4.ai.length.BalancedLengthAI
+import connect4.ai.length.DefensiveLengthAI
+import connect4.ai.length.SimpleLengthAI
+import connect4.ai.monte.BalancedMonteCarloAI
+import connect4.ai.monte.MaximizeWinsMonteCarloAI
+import connect4.ai.monte.MinimizeLossesMonteCarloAI
+import connect4.ai.simple.BiasedRandomAI
 import connect4.game.Connect4Game
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -42,7 +42,7 @@ object Connect4GameHandler {
 
     suspend fun loadStored() {
         mutex.withLock {
-            storedHandler.loadStoredNeurals((1..7).map { "$it" }.toList())
+            storedHandler.loadStoredNeurals("neurals")
         }
     }
 

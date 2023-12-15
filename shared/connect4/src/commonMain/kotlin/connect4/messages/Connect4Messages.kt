@@ -1,9 +1,14 @@
 package connect4.messages
 
-import connect4.game.Player
+import connect4.game.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+
+private fun Boolean.toShortString() = when(this) {
+    true -> "T"
+    false -> "F"
+}
 
 @Serializable
 sealed class Connect4Message {
@@ -29,41 +34,77 @@ data class GameFinishedMessage(val player: Player?) : Connect4Message()
 data class NextMoveMessage(val column: Int) : Connect4Message()
 
 @Serializable
-data class LayerDescription(val size: LayerSize, val activation: Activation) : Connect4Message() {
-    fun toShortString() = if (size == LayerSize.None) {
-        size.toShortString()
-    } else {
-        size.toShortString() + activation.toShortString()
-    }
-    companion object {
-        fun fromShortString(short: String): LayerDescription {
-            val size = LayerSize.fromShortString(short.take(1))
+data class DenseLayerDescription(val size: LayerSize, val activation: Activation? = null) : Connect4Message() {
+    fun toShortString() = size.toShortString() + (activation?.toShortString() ?: "")
 
-            return if(size == LayerSize.None) {
-                LayerDescription(size, Activation.Swish)
-            } else {
-                val activation = Activation.fromShortString(short.drop(1))
-                LayerDescription(size, activation)
+    companion object {
+        private fun getActivation(short: String) = Activation.fromShortString(short.drop(1).take(1))
+
+        fun fromShortString(short: String): DenseLayerDescription =
+            when (val size = LayerSize.fromShortString(short.take(1))) {
+                LayerSize.None -> DenseLayerDescription(size)
+                else -> DenseLayerDescription(size, getActivation(short))
             }
-        }
     }
 }
 
 @Serializable
-data class NeuralDescription(val conv: LayerDescription, val dense: LayerDescription) : Connect4Message() {
-    fun toShortString() = "${conv.toShortString()}-${dense.toShortString()}"
+data class ConvLayerDescription(
+    val size: LayerSize,
+    val activation: Activation? = null,
+    val padding: Padding? = null
+) : Connect4Message() {
+    fun toShortString() = size.toShortString() +
+            (activation?.toShortString() ?: "") +
+            (padding?.toShortString() ?: "")
+
+    companion object {
+        private fun getActivation(short: String) = Activation.fromShortString(short.drop(1).take(1))
+        private fun getPadding(short: String) = Padding.fromShortString(short.drop(2).take(1))
+
+        fun fromShortString(short: String): ConvLayerDescription =
+            when (val size = LayerSize.fromShortString(short.take(1))) {
+                LayerSize.None -> ConvLayerDescription(size)
+                else -> ConvLayerDescription(size, getActivation(short), getPadding(short))
+            }
+    }
+}
+
+@Serializable
+data class NeuralDescription(
+    val inputSingular: Boolean,
+    val batchNorm: Boolean,
+    val conv: ConvLayerDescription,
+    val dense: DenseLayerDescription,
+    val outputLayer: OutputActivation
+) : Connect4Message() {
+    fun toShortString(): String =
+        "${inputSingular.toShortString()}${batchNorm.toShortString()}-${conv.toShortString()}-${dense.toShortString()}-${outputLayer.toShortString()}"
 
     companion object {
         fun fromShortString(short: String): NeuralDescription {
-            val descriptions = short.split("-").map(LayerDescription::fromShortString)
+            val parts = short.split("-")
 
-            return NeuralDescription(descriptions.first(), descriptions.last())
+            return NeuralDescription(
+                parts[0][0] == 'T',
+                parts[0][1] == 'T',
+                ConvLayerDescription.fromShortString(parts[1]),
+                DenseLayerDescription.fromShortString(parts[2]),
+                OutputActivation.fromShortString(parts[3])
+            )
         }
     }
 }
 
 @Serializable
-data class TrainingResultsMessage(val results: List<Pair<NeuralDescription, List<Double>>>) : Connect4Message()
+data class TrainingResultMessage(
+    val description: NeuralDescription,
+    val trainingTime: Double,
+    val results: List<Double>
+) : Connect4Message()
+
+@Serializable // TODO better names, and include in Portfolio
+data class TrainingResultsMessage(val results: List<TrainingResultMessage>) : Connect4Message()
 
 @Serializable
 object WaitMessage : Connect4Message()

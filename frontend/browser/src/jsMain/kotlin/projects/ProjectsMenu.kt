@@ -1,10 +1,9 @@
 package projects
 
-import menu.SubMenu
-import menu.SubmenuState
+import menu.RecursiveSubMenu
+import overview.OverviewState
 import projects.automaton.AutomatonOverview
 import projects.connect4.Connect4Overview
-import projects.debug.DebugPage
 import projects.kdtree.KdTreeOverview
 import projects.labyrinth.LabyrinthOverview
 import projects.shuffle.ShuffleOverview
@@ -12,69 +11,104 @@ import projects.trippy.TrippyOverview
 import react.FC
 import react.Props
 
-sealed interface ProjectState : SubmenuState
+//sealed interface ProjectState : OverviewState
 
-sealed interface ExternalProjectState : SubmenuState {
-    val externalName: String
+data class ProjectState(
+    val projectOverview: ProjectOverview,
+    val state: ProjectSubState,
+    val route: String
+) : OverviewState {
+    override val component: FC<Props>
+        get() = FC<Props> {
+            projectOverview.create {
+                subState = state
+                parentRoute = route
+            }
+        }
+}
+
+class ProjectSubStateMenu(
+    projectOverview: ProjectOverview,
+    subState: ProjectSubState,
+    override val parentPath: String
+) : RecursiveSubMenu() {
+    override val text: String = subState.toString()
+    override val path: String = text.lowercase()
+    override val elements: List<RecursiveSubMenu> = emptyList()
+
+    override val state: OverviewState = ProjectState(
+        projectOverview,
+        subState,
+        path
+    )
+}
+
+class ProjectSubMenu(
+    override val text: String,
+    projectOverview: ProjectOverview,
+    override val path: String = text.lowercase(),
+    val externalName: String = text
+) : RecursiveSubMenu() {
+    override val parentPath = ProjectsMenu.fullPath
+
+    override val elements: List<RecursiveSubMenu> = ProjectSubState.entries.toList().map { subState ->
+        ProjectSubStateMenu(
+            projectOverview,
+            subState,
+            fullPath
+        )
+    }
+
+    override val state: OverviewState = elements.first().state!!
 }
 
 object ProjectStates {
-    object KdTree : ExternalProjectState {
-        override val text: String = "KdTree"
-        override val path: String = "kd-tree"
-        override val externalName = text
-        override val component: FC<Props>
-            get() = KdTreeOverview.create
-    }
-    object Automaton: ExternalProjectState {
-        override val text: String = "Automaton"
-        override val path: String = text.lowercase()
-        override val externalName = text
-        override val component: FC<Props>
-            get() = AutomatonOverview.create
-    }
-    object Trippy: ExternalProjectState {
-        override val text: String = "Trippy"
-        override val path: String = text.lowercase()
-        override val externalName = text
-        override val component: FC<Props>
-            get() = TrippyOverview.create
-    }
-    object Shuffle: ExternalProjectState {
-        override val text: String = "\"Shuffling\""
-        override val path: String = "shuffling"
-        override val externalName = "Shuffle"
-        override val component: FC<Props>
-            get() = ShuffleOverview.create
-    }
-    object Labyrinth: ExternalProjectState {
-        override val text: String = "Labyrinth"
-        override val path: String = text.lowercase()
-        override val externalName = text
-        override val component: FC<Props>
-            get() = LabyrinthOverview.create
-    }
-    object Connect4: ExternalProjectState {
-        override val text: String = "Connect4"
-        override val path: String = "connect-four"
-        override val externalName = text
-        override val component: FC<Props>
-            get() = Connect4Overview.create
-    }
-    object Debug: ExternalProjectState {
-        override val text: String = "Debug"
-        override val path: String = text.lowercase()
-        override val externalName = text
-        override val component: FC<Props>
-            get() = DebugPage
-    }
+    private val KdTree: ProjectSubMenu =
+        ProjectSubMenu(
+            text = "KdTree",
+            projectOverview = KdTreeOverview
+        )
 
-    val states = listOf(KdTree, Automaton, Trippy, Shuffle, Labyrinth, Connect4, Debug)
+    private val Automaton: ProjectSubMenu =
+        ProjectSubMenu(
+            text = "Automaton",
+            projectOverview = AutomatonOverview
+        )
+
+    private val Trippy: ProjectSubMenu =
+        ProjectSubMenu(
+            text = "Trippy",
+            projectOverview = TrippyOverview
+        )
+
+    private val Shuffle: ProjectSubMenu =
+        ProjectSubMenu(
+            text = "\"Shuffling\"",
+            projectOverview = ShuffleOverview,
+            path = "shuffling",
+            externalName = "Shuffle"
+        )
+
+    private val Labyrinth: ProjectSubMenu =
+        ProjectSubMenu(
+            text = "Labyrinth",
+            projectOverview = LabyrinthOverview
+        )
+
+    val Connect4: ProjectSubMenu =
+        ProjectSubMenu(
+            text = "Connect4",
+            projectOverview = Connect4Overview,
+            path = "connect-four"
+        )
+
+    val states = listOf(KdTree, Automaton, Trippy, Shuffle, Labyrinth, Connect4)
 }
 
-object ProjectsMenu : SubMenu() {
+object ProjectsMenu : RecursiveSubMenu() {
     override val text: String = "Projects"
     override val path: String = text.lowercase()
-    override val matchingState = ProjectState::class
-    override val elements: List<SubmenuState> = ProjectStates.states
+    override val elements: List<RecursiveSubMenu> = ProjectStates.states
 }
+
+// TODO fix issues: name, buttons should be a, menu not black if in /about route

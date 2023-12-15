@@ -43,7 +43,7 @@ tasks.withType<ShadowJar> {
     archiveVersion.set("v1")
 
     val debug = System.getenv("DEBUG")
-    val projects = mutableListOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle", "canvas:labyrinth")
+    val projects = mutableListOf("browser", "canvas:automaton", "canvas:kdtree", "canvas:shuffle", "canvas:labyrinth", "canvas:connect4:about")
     val environment = if(debug == "true") {
         projects.add("canvas:connect4:debug")
         "Development"

@@ -3,15 +3,17 @@ package overview
 import aboutme.AboutMeStates
 import css.ClassNames
 import css.and
-import web.cssom.pct
-import web.cssom.px
-import web.cssom.Float
 import emotion.react.css
 import kotlinx.browser.document
-import projects.ExternalProjectState
 import projects.ProjectStates
-import react.*
+import react.FC
+import react.Props
 import react.dom.html.ReactHTML.div
+import react.useEffectOnce
+import react.useState
+import web.cssom.Float
+import web.cssom.pct
+import web.cssom.px
 
 interface OverviewState {
     val component: FC<Props>
@@ -40,6 +42,7 @@ object NotFoundState : OverviewState {
 
 fun overview(component: OverviewState = AboutMeStates.Intro) = FC<Props> {
     val (state, setState) = useState(component)
+
     val (loadingExternalScripts, setLoadingExternalScripts) = useState(
         ProjectStates.states.map { it.externalName }
     )
@@ -85,13 +88,19 @@ fun overview(component: OverviewState = AboutMeStates.Intro) = FC<Props> {
                 float = Float.left
             }
 
-            val maybeExternalState = state as? ExternalProjectState
+            //val maybeExternalState = state as? ExternalProjectState
+            /* TODO fix
+            val maybeExternalState = state as? ProjectState
 
             if (maybeExternalState == null || !loadingExternalScripts.contains(maybeExternalState.externalName)) {
+              */
                 state.component {}
+            /*
             } else {
                 LoadingScreen().component { title = maybeExternalState.text }
             }
+
+             */
         }
     }
     Footer { stateSetter = { setState(it) } }

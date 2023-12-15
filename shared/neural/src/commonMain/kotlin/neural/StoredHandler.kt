@@ -4,9 +4,11 @@ import java.io.File
 
 class StoredHandler {
     companion object {
-        private val directory = File("${System.getProperty("user.dir")}/neurals")
+        fun loadStored(path: String, names: List<String> = emptyList(), prefix: String? = null, silent: Boolean = false): List<StoredNeuralAI> {
+            val directory = File("${System.getProperty("user.dir")}/$path")
 
-        fun loadStored(names: List<String> = emptyList(), prefix: String? = null, silent: Boolean = false): List<StoredNeuralAI> {
+            println(directory)
+
             if(!silent) {
                 println("Loading from storage:")
             }
@@ -22,7 +24,7 @@ class StoredHandler {
                             (prefix != null && name.startsWith(prefix))
                         ) {
                             try {
-                                val loaded = StoredNeuralAI.fromStorage(name)
+                                val loaded = StoredNeuralAI.fromStorage(path, name)
                                 if(!silent) {
                                     println(loaded.info())
                                 }
@@ -34,7 +36,7 @@ class StoredHandler {
                     }
                 }
             }
-            return loadedNeurals;
+            return loadedNeurals
         }
     }
 
@@ -42,7 +44,7 @@ class StoredHandler {
 
     fun allNeurals() = neurals.toList()
 
-    fun loadStoredNeurals(names: List<String> = emptyList(), prefix: String? = null, silent: Boolean = false) {
-        neurals.addAll(loadStored(names, prefix, silent))
+    fun loadStoredNeurals(path: String = "neurals", names: List<String> = emptyList(), prefix: String? = null, silent: Boolean = false) {
+        neurals.addAll(loadStored(path, names, prefix, silent))
     }
 }

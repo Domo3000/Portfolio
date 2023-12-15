@@ -4,7 +4,6 @@ import projects.ProjectStates
 import projects.ProjectsMenu
 import react.FC
 import react.Props
-import web.window.WindowTarget
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
@@ -12,6 +11,7 @@ import react.dom.html.ReactHTML.h3
 import react.dom.html.ReactHTML.p
 import react.dom.html.ReactHTML.summary
 import utils.Github
+import web.window.WindowTarget
 
 val BackendComponent = FC<Props> {
     div {

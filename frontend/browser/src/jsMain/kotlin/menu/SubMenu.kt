@@ -1,14 +1,13 @@
 package menu
 
-import web.cssom.*
 import emotion.react.css
 import kotlinx.browser.window
 import overview.OverviewState
-import projects.ExternalProjectState
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML
 import react.useState
+import web.cssom.*
 import kotlin.reflect.KClass
 
 external interface SubMenuElementProps : Props {
@@ -31,8 +30,8 @@ interface SubmenuState : OverviewState {
 
                 onClick = {
                     it.preventDefault()
-                    if (props.disabled == false) {
-                        window.history.replaceState(Unit, "Domo", fullPath)
+                    if (props.disabled != true) {
+                        window.history.replaceState(Unit, "Domo", fullPath) // TODO use for Play/A/I Buttons in Project
                         props.setState(this@SubmenuState)
                     }
                 }
@@ -41,6 +40,12 @@ interface SubmenuState : OverviewState {
                     display = Display.block
                     paddingLeft = 15.px
 
+                    console.log(props.currentState)
+                    console.log(props.currentState::class.toString())
+                    console.log(props.currentState::class.simpleName)
+                    console.log(this@SubmenuState)
+                    console.log(this@SubmenuState::class.toString())
+                    console.log(this@SubmenuState::class.simpleName)
                     if (props.currentState == this@SubmenuState) {
                         fontWeight = FontWeight.bold
                     }
@@ -58,7 +63,6 @@ interface SubmenuState : OverviewState {
 external interface SubMenuProps : Props {
     var currentState: OverviewState
     var setState: (SubmenuState) -> Unit
-    var externalStates: List<String>
 }
 
 abstract class SubMenu {
@@ -78,13 +82,8 @@ abstract class SubMenu {
             }
             if (!collapsed || matchingState.isInstance(props.currentState)) {
                 elements.forEach { element ->
-                    val maybeExternalState = element as? ExternalProjectState
-                    val disabled =
-                        (maybeExternalState != null && props.externalStates.contains(maybeExternalState.externalName))
-
                     element.element {
                         parentPath = path
-                        this.disabled = disabled
                         currentState = props.currentState
                         setState = props.setState
                     }

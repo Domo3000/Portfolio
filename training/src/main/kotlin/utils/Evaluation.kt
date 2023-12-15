@@ -1,8 +1,8 @@
 package utils
 
-import ai.AI
-import ai.BattleCounter
-import ai.BattleHandler
+import connect4.ai.AI
+import connect4.ai.BattleCounter
+import connect4.ai.BattleHandler
 import connect4.game.Connect4Game
 import connect4.game.Player
 import neural.Move

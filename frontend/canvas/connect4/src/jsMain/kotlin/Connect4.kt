@@ -1,4 +1,5 @@
 import canvas.*
+import connect4.game.AIChoice
 import connect4.game.Connect4Game
 import connect4.game.Player
 import connect4.game.sizeY

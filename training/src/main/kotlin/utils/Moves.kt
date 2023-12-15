@@ -1,18 +1,25 @@
 package utils
 
-import ai.AI
+import connect4.ai.AI
 import connect4.game.Connect4Game
 import connect4.game.Player
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import neural.Move
-import neural.repeatLastMoves
 import kotlin.random.Random
+
+private fun List<Move>.repeatLastMoves(): List<Move> {
+    return if (size >= 4) {
+        this + takeLast(size / 4).repeatLastMoves()
+    } else {
+        this
+    }
+}
 
 private fun allPossibleWinningMoves(game: Connect4Game): List<Move> = game.availableColumns.map { column ->
     val maybeWinningGame = Connect4Game(game.field, game.currentPlayer)
     maybeWinningGame.makeMove(column)
-    if (maybeWinningGame.hasFinished()) { //TODO check for draw
+    if (maybeWinningGame.hasFinished() && maybeWinningGame.result().second != null) {
         Move(game.field.map { it.toList() }, column)
     } else {
         null
@@ -73,9 +80,11 @@ fun getTrainingMoves(players: List<() -> AI>): List<Move> {
                 emptyList()
             }
 
+            val allWinningMoves = allPossibleWinningMoves(game)
+
             game.makeMove(m)
 
-            playerMoves
+            playerMoves + allWinningMoves
         }.flatten().repeatLastMoves()
     }.flatten()
 }

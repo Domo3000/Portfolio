@@ -1,12 +1,12 @@
 package connect4.ai
 
-import ai.length.BalancedLengthAI
-import ai.length.DefensiveLengthAI
-import ai.length.SimpleLengthAI
-import ai.monte.BalancedMonteCarloAI
-import ai.monte.MaximizeWinsMonteCarloAI
-import ai.monte.MinimizeLossesMonteCarloAI
-import ai.simple.BiasedRandomAI
+import connect4.ai.length.BalancedLengthAI
+import connect4.ai.length.DefensiveLengthAI
+import connect4.ai.length.SimpleLengthAI
+import connect4.ai.monte.BalancedMonteCarloAI
+import connect4.ai.monte.MaximizeWinsMonteCarloAI
+import connect4.ai.monte.MinimizeLossesMonteCarloAI
+import connect4.ai.simple.BiasedRandomAI
 
 object AIs {
     val simpleAIs = listOf(

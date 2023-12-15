@@ -1,8 +1,12 @@
 package neural
 
-import connect4.messages.Activation
-import connect4.messages.LayerDescription
-import connect4.messages.LayerSize
+import connect4.game.Activation
+import connect4.game.LayerSize
+import connect4.game.OutputActivation
+import connect4.game.Padding
+import connect4.messages.ConvLayerDescription
+import connect4.messages.DenseLayerDescription
+import connect4.messages.NeuralDescription
 import org.jetbrains.kotlinx.dl.api.core.activation.Activations
 import org.jetbrains.kotlinx.dl.api.core.initializer.*
 import org.jetbrains.kotlinx.dl.api.core.layer.Layer
@@ -10,145 +14,112 @@ import org.jetbrains.kotlinx.dl.api.core.layer.core.Dense
 import kotlin.random.Random
 
 private fun Activation.toActivations() = when (this) {
-    Activation.Relu -> Activations.Relu
-    Activation.Swish -> Activations.Swish
-    Activation.LiSHT -> Activations.LiSHT
     Activation.Elu -> Activations.Elu
+    Activation.LiSHT -> Activations.LiSHT
     Activation.Mish -> Activations.Mish
+    Activation.Relu -> Activations.Relu
+    Activation.Snake -> Activations.Snake
 }
 
-private fun Activation.getInitializers(): Pair<(Long) -> Initializer, (Long) -> Initializer> = when (this) {
-    Activation.Relu -> Pair({ HeNormal(it) }, { Constant(0.01f) })
-    Activation.Swish, Activation.Mish -> Pair({ HeNormal(it) }, { HeUniform(it) })
-    Activation.Elu -> Pair({ HeNormal(it) }, { Zeros() })
-    else -> Pair({ GlorotNormal(it) }, { RandomNormal(0.0f, 0.2f) })
+private fun OutputActivation.toActivations() = when (this) {
+    OutputActivation.Linear -> Activations.Linear
+    OutputActivation.Relu -> Activations.Relu
+    OutputActivation.Sigmoid -> Activations.Sigmoid
+    OutputActivation.Softmax -> Activations.Softmax
+    OutputActivation.Tanh -> Activations.Tanh
 }
 
-private data class ConvLayer(val filters: Int, val kernelSize: Int) {
-    fun toLayer(activation: Activation, seed: Long): Layer {
-        val (initializer, biasInitializer) = activation.getInitializers()
-
-        return LayerFactory.conv2D(
-            filters,
-            kernelSize,
-            activation.toActivations(),
-            initializer(seed),
-            biasInitializer(seed)
-        )
-    }
+private data class ConvLayer(val filters: Int, val kernelSize: Int, val padding: Padding) {
+    fun toLayer(
+        activation: Activation,
+        seed: Long
+    ): Layer = LayerFactory.conv2D(
+        filters,
+        kernelSize,
+        padding,
+        activation.toActivations(),
+        HeNormal(seed),
+        HeUniform(seed)
+    )
 }
 
 private data class DenseLayer(val size: Int) {
-    fun toLayer(activation: Activation, seed: Long): Dense {
-        val (initializer, biasInitializer) = activation.getInitializers()
-
-        return LayerFactory.dense(
-            size,
-            activation.toActivations(),
-            initializer(seed),
-            biasInitializer(seed)
-        )
-    }
+    fun toLayer(
+        activation: Activation,
+        seed: Long,
+        initializers: Pair<(Long) -> Initializer, (Long) -> Initializer> = Pair({ HeNormal(it) }, { HeUniform(it) })
+    ): Dense = LayerFactory.dense(
+        size,
+        activation.toActivations(),
+        initializers.first(seed),
+        initializers.second(seed)
+    )
 }
 
 object NeuralBuilder {
     fun build(
-        conv: LayerDescription,
-        dense: LayerDescription,
-        random: Random
-    ): RandomNeuralAI {
-        val convLayer = when (conv.size) {
+        inputSingular: Boolean,
+        batchNorm: Boolean,
+        conv: List<Layer>,
+        dense: List<Dense>,
+        output: Dense
+    ) = ConstructedNeuralAI(
+        input = InputType.toInput(inputSingular),
+        batchNorm = batchNorm,
+        conv = conv,
+        dense = dense,
+        output = output
+    )
+
+    fun buildConv(description: ConvLayerDescription, random: Random): List<Layer> =
+        when (description.size) {
             LayerSize.None -> emptyList()
+
             LayerSize.Small -> listOf(
-                ConvLayer(32, 4)
+                ConvLayer(32, 4, description.padding!!)
             )
 
             LayerSize.Medium -> listOf(
-                ConvLayer(64, 4)
+                ConvLayer(32, 4, description.padding!!),
+                ConvLayer(32, 3, description.padding!!)
             )
 
             LayerSize.Large -> listOf(
-                ConvLayer(64, 4),
-                ConvLayer(64, 3)
+                ConvLayer(64, 4, description.padding!!),
+                ConvLayer(64, 3, description.padding!!)
             )
 
             LayerSize.Giant -> listOf(
-                ConvLayer(128, 4),
-                ConvLayer(64, 4),
-                ConvLayer(32, 4)
+                ConvLayer(64, 4, description.padding!!),
+                ConvLayer(64, 2, description.padding!!),
+                ConvLayer(64, 2, description.padding!!)
             )
-        }.map { it.toLayer(conv.activation, random.nextLong()) }
+        }.map { it.toLayer(description.activation!!, random.nextLong()) }
 
-        val denseLayer = when (dense.size) {
-            LayerSize.None -> emptyList()
-            LayerSize.Small -> listOf(DenseLayer(210))
-            LayerSize.Medium -> listOf(DenseLayer(210), DenseLayer(210), DenseLayer(210))
-            LayerSize.Large -> listOf(DenseLayer(630))
-            LayerSize.Giant -> listOf(
-                DenseLayer(630),
-                DenseLayer(420),
-                DenseLayer(210),
-                DenseLayer(140),
-                DenseLayer(70)
-            )
-        }.map { it.toLayer(dense.activation, random.nextLong()) }
+    fun buildDense(description: DenseLayerDescription, random: Random): List<Dense> = when (description.size) {
+        LayerSize.None -> emptyList()
+        LayerSize.Small -> listOf(DenseLayer(70))
+        LayerSize.Medium -> listOf(DenseLayer(350))
+        LayerSize.Large -> listOf(210, 210, 210).map { DenseLayer(it) }
+        LayerSize.Giant ->  listOf(420, 350, 280, 210, 140).map { DenseLayer(it) }
+        else -> emptyList()
+    }.map { it.toLayer(description.activation!!, random.nextLong()) }
 
-        return RandomNeuralAI(
-            input = InputType.toInput(false),
-            batchNorm = when (conv.size) {
-                LayerSize.Giant -> true
-                else -> false
-            },
-            conv = convLayer,
-            dense = denseLayer,
-            output = LayerFactory.dense(
-                7,
-                Activations.Linear,
-                GlorotNormal(random.nextLong()),
-                Constant(0.5f)
-            )
-        )
-    }
+    fun buildOutput(activation: OutputActivation, random: Random) = LayerFactory.dense(
+        7,
+        activation.toActivations(),
+        GlorotNormal(random.nextLong()),
+        GlorotUniform(random.nextLong())
+    )
 
-    fun basic(random: Random): List<RandomNeuralAI> {
-        val smaller = listOf(LayerSize.None, LayerSize.Small, LayerSize.Medium)
-
-        return smaller.flatMap { conv ->
-            smaller.flatMap { dense ->
-                Activation.entries.map { activation ->
-                    build(LayerDescription(conv, activation), LayerDescription(dense, activation), random)
-                }
-            }
-        }
-    }
-
-    fun noConv(random: Random) = LayerSize.entries.flatMap { dense ->
-        Activation.entries.map { activation ->
-            build(LayerDescription(LayerSize.None, activation), LayerDescription(dense, activation), random)
-        }
-    }
-
-    fun medium(random: Random): List<RandomNeuralAI> {
-        val medium = listOf(LayerSize.Small, LayerSize.Medium, LayerSize.Large)
-
-        return medium.flatMap { conv ->
-            medium.flatMap { dense ->
-                Activation.entries.map { activation ->
-                    build(LayerDescription(conv, activation), LayerDescription(dense, activation), random)
-                }
-            }
-        }
-    }
-
-    fun big(random: Random): List<RandomNeuralAI> {
-        val big = listOf(LayerSize.Medium, LayerSize.Large, LayerSize.Giant)
-
-        return big.flatMap { conv ->
-            big.flatMap { dense ->
-                Activation.entries.map { activation ->
-                    build(LayerDescription(conv, activation), LayerDescription(dense, activation), random)
-                }
-            }
-        }
-    }
+    fun build(
+        description: NeuralDescription,
+        random: Random
+    ): ConstructedNeuralAI = build(
+        inputSingular = description.inputSingular,
+        batchNorm = description.batchNorm,
+        conv = buildConv(description.conv, random),
+        dense = buildDense(description.dense, random),
+        output = buildOutput(description.outputLayer, random)
+    )
 }

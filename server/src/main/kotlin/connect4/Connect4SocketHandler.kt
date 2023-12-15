@@ -1,6 +1,7 @@
 package connect4
 
-import ai.AI
+import connect4.ai.AI
+import connect4.game.AIChoice
 import connect4.game.Connect4Game
 import connect4.game.Player
 import connect4.messages.*

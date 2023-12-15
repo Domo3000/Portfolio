@@ -1,8 +1,8 @@
 
-import ai.length.SimpleLengthAI
-import ai.simple.AlwaysSameAI
-import ai.simple.BiasedRandomAI
-import ai.simple.RandomAI
+import connect4.ai.length.SimpleLengthAI
+import connect4.ai.simple.AlwaysSameAI
+import connect4.ai.simple.BiasedRandomAI
+import connect4.ai.simple.RandomAI
 import kotlinx.datetime.Clock
 import org.junit.Test
 import utils.Moves

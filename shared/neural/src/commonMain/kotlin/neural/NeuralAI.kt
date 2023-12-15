@@ -1,6 +1,6 @@
 package neural
 
-import ai.AI
+import connect4.ai.AI
 import connect4.game.Player
 import org.jetbrains.kotlinx.dl.api.core.SavingFormat
 import org.jetbrains.kotlinx.dl.api.core.Sequential
@@ -85,7 +85,7 @@ private fun Layer.name(): String = when (this) {
     is Input -> "Input(${packedDims[2]})"
     is BatchNorm -> "BatchNorm()"
     is Dense -> "Dense($outputSize/${activation.name})"
-    is Conv2D -> "Conv($filters/${kernelSize.contentToString()}/${activation.name})"
+    is Conv2D -> "Conv($filters/${kernelSize.contentToString()}/${activation.name}/$padding)"
     is AvgPool2D -> "Avg2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
     is MaxPool2D -> "Max2D(${poolSize.contentToString()}/${strides.contentToString()}/$padding)"
     is Flatten -> "Flatten()"
@@ -146,19 +146,11 @@ abstract class NeuralAI : AI(null) {
     fun info() =
         "$name: ${brain.layers.joinToString(", ", "{ ", " }") { it.name() }}"
 
-    fun shortInfo() =
-        brain.layers.mapNotNull {
-            when(it) {
-                is BatchNorm -> "BN"
-                is Dense -> "D(${it.outputSize}-${it.activation.toString().first()})"
-                is Conv2D -> "C(${it.filters}-${it.kernelSize.first()}-${it.activation.toString().first()})"
-                else -> null
-            }
-        }.joinToString("-")
+    fun paramsCount() = brain.summary().totalParamsCount
 
-    fun store(path: String) {
-        val baseDirectory = "${System.getProperty("user.dir")}/neurals"
-        val directory = File("$baseDirectory/$path")
+    fun store(path: String, name: String) {
+        val baseDirectory = "${System.getProperty("user.dir")}/$path"
+        val directory = File("$baseDirectory/$name")
         if (!directory.isDirectory) {
             directory.mkdir()
         }
@@ -198,5 +190,21 @@ class MostCommonAI(private val neurals: List<NeuralAI>) : AI(null) {
         }.map { list ->
             list.maxBy { it.second }.first
         }.groupingBy { it }.eachCount().maxBy { it.value }.key
+    }
+}
+
+class SwitchAI(private val neurals: List<NeuralAI>, seed: Long) : AI(seed) {
+    override val name: String = "Switch(${neurals.size})"
+
+    override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int {
+        val ai = when (random.nextInt(0, 5)) {
+            0 -> neurals.random(random)
+
+            in 1..2 -> OverallHighestAI(neurals.shuffled(random).take(random.nextInt(2, neurals.size)))
+
+            else -> MostCommonAI(neurals.shuffled(random).take(random.nextInt(2, neurals.size)))
+        }
+
+        return ai.nextMove(field, availableColumns, player)
     }
 }

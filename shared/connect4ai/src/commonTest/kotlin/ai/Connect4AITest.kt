@@ -1,8 +1,9 @@
 package ai
 
-import ai.length.BalancedLengthAI
-import ai.length.SimpleLengthAI
-import ai.monte.BalancedMonteCarloAI
+import connect4.ai.BattleHandler
+import connect4.ai.length.BalancedLengthAI
+import connect4.ai.length.SimpleLengthAI
+import connect4.ai.monte.BalancedMonteCarloAI
 import org.junit.Test
 import java.time.Instant
 import kotlin.random.Random

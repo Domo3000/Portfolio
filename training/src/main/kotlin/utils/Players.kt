@@ -1,40 +1,27 @@
 package utils
 
-import ai.AI
-import ai.length.AggressiveLengthAI
-import ai.length.BalancedLengthAI
-import ai.length.DefensiveLengthAI
-import ai.length.SimpleLengthAI
-import ai.monte.BalancedMonteCarloAI
-import ai.simple.BiasedRandomAI
-import neural.MostCommonAI
-import neural.OverallHighestAI
+import connect4.ai.length.AggressiveLengthAI
+import connect4.ai.length.BalancedLengthAI
+import connect4.ai.length.DefensiveLengthAI
+import connect4.ai.length.SimpleLengthAI
+import connect4.ai.simple.BiasedRandomAI
 import neural.StoredHandler
+import neural.SwitchAI
 import kotlin.random.Random
 
 object Neurals {
-    private val neurals by lazy { StoredHandler.loadStored(prefix = "load") }
-
-    fun player(random: Random): AI {
-        val ai = when (random.nextInt(0, 5)) {
-            0 -> neurals.random(random)
-
-            in 1..2 -> OverallHighestAI(neurals.shuffled(random).take(3))
-
-            else -> MostCommonAI(neurals.shuffled(random).take(3))
-        }
-
-        return ai
-    }
+    val neurals by lazy { StoredHandler.loadStored("server/neurals") }
 }
 
 fun trainingPlayers(random: Random) = listOf(
-    { Neurals.player(random) },
+    { BiasedRandomAI(random.nextLong()) },
+    { SwitchAI(Neurals.neurals, random.nextLong()) },
+    { SwitchAI(Neurals.neurals.take(random.nextInt(3, 5)), random.nextLong()) },
+    { SwitchAI(Neurals.neurals.take(random.nextInt(5, Neurals.neurals.size)), random.nextLong()) },
     { AggressiveLengthAI(true, random.nextLong()) },
     { DefensiveLengthAI(true, random.nextLong()) },
     { BalancedLengthAI(true, random.nextLong()) },
-    { SimpleLengthAI(true, random.nextLong()) },
-    { BalancedMonteCarloAI(500, random.nextLong()) }
+    { SimpleLengthAI(true, random.nextLong()) }
 ).shuffled()
 
 fun battlePlayers(random: Random) = listOf(

@@ -6,7 +6,6 @@ import menu.SubMenu
 import projects.ProjectsMenu
 import react.FC
 import react.Props
-import web.window.WindowTarget
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
@@ -16,6 +15,7 @@ import react.dom.html.ReactHTML.strong
 import react.dom.html.ReactHTML.summary
 import react.dom.html.ReactHTML.ul
 import utils.Github
+import web.window.WindowTarget
 
 external interface ListProps : Props {
     var page: SubMenu
@@ -87,9 +87,13 @@ val IntroComponent = FC<Props> {
                 +ProjectsMenu.text
             }
             +"Little showcases"
+            /*
+            TODO fix
             list {
                 page = ProjectsMenu
             }
+
+             */
         }
     }
 }

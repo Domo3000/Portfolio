@@ -1,5 +1,6 @@
 package connect4.messages
 
+import connect4.game.AIChoice
 import connect4.game.Player
 import kotlin.test.Test
 import kotlin.test.assertEquals

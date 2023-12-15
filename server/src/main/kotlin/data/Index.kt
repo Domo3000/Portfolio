@@ -32,10 +32,8 @@ fun HTML.index() {
             id = "script-holder"
             script(src = "/static/main-$version.js") { }
         }
-        script(src = "/static/automaton-$version.js") { async = true }
-        script(src = "/static/kdtree-$version.js") { async = true }
-        script(src = "/static/shuffle-$version.js") { async = true }
-        script(src = "/static/labyrinth-$version.js") { async = true }
-        script(src = "/static/connect4-$version.js") { async = true }
+        listOf("automaton", "kdtree", "shuffle", "labyrinth", "connect4", "connect4about").forEach { name ->
+            script(src = "/static/$name-$version.js") { async = true }
+        }
     }
 }

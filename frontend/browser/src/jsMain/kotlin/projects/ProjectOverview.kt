@@ -1,22 +1,28 @@
 package projects
 
-import web.cssom.*
 import emotion.react.css
-import web.events.Event
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML
 import react.useEffectOnce
 import react.useState
+import web.cssom.Float
+import web.cssom.FontWeight
+import web.cssom.TextAlign
+import web.cssom.pct
 import web.dom.document
+import web.events.Event
 import web.events.EventType
 
-sealed interface ProjectSubState
+enum class ProjectSubState {
+    Play,
+    About,
+    Implementation
+}
 
-object ProjectSubStates {
-    object Play : ProjectSubState
-    object About : ProjectSubState
-    object Implementation : ProjectSubState
+external interface ProjectOverviewProps : Props {
+    var subState: ProjectSubState
+    var parentRoute: String
 }
 
 abstract class ProjectOverview {
@@ -25,12 +31,9 @@ abstract class ProjectOverview {
     abstract val playPage: FC<Props>
     open val header: String? = null
 
-    private val states: Set<ProjectSubState> =
-        setOf(ProjectSubStates.Play, ProjectSubStates.About, ProjectSubStates.Implementation)
-
-    val create: FC<Props>
-        get() = FC {
-            val (state, setState) = useState<ProjectSubState>(ProjectSubStates.Play)
+    val create: FC<ProjectOverviewProps>
+        get() = FC { props ->
+            val (state, setState) = useState(props.subState)
 
             ReactHTML.div {
                 header?.let {
@@ -44,9 +47,10 @@ abstract class ProjectOverview {
             }
 
             ReactHTML.div {
-                states.forEach { contentState ->
-                    ReactHTML.div {
-                        +contentState::class.simpleName!!
+                ProjectSubState.entries.toList().forEach { contentState ->
+                    ReactHTML.a {
+                        href = "${props.parentRoute}/${contentState.toString().lowercase()}"
+                        +contentState.toString()
                         css {
                             width = 33.pct
                             float = Float.left
@@ -56,6 +60,7 @@ abstract class ProjectOverview {
                             }
                         }
                         onClick = {
+                            it.preventDefault()
                             setState(contentState)
                         }
                     }
@@ -64,9 +69,9 @@ abstract class ProjectOverview {
 
             ReactHTML.div {
                 when (state) {
-                    ProjectSubStates.About -> aboutPage { }
-                    ProjectSubStates.Implementation -> implementationPage { }
-                    ProjectSubStates.Play -> playPage { }
+                    ProjectSubState.About -> aboutPage { }
+                    ProjectSubState.Implementation -> implementationPage { }
+                    ProjectSubState.Play -> playPage { }
                 }
             }
         }
