@@ -1,7 +1,10 @@
 package neural
 
 import connect4.ai.AI
+import connect4.game.InputType
 import connect4.game.Player
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.jetbrains.kotlinx.dl.api.core.SavingFormat
 import org.jetbrains.kotlinx.dl.api.core.Sequential
 import org.jetbrains.kotlinx.dl.api.core.WritingMode
@@ -19,12 +22,13 @@ import java.io.File
 
 class Move(val field: List<List<Player?>>, val move: Int)
 
-private fun List<List<Player?>>.toFloatArraySingular(player: Player): FloatArray {
+
+private fun List<List<Player?>>.toFloatArraySingular(player: Player, opponent: Float): FloatArray {
     val x = normalize(player).flatten().map { element ->
         when (element) {
             player -> 1.0f
             null -> 0.0f
-            else -> -1.0f
+            else -> opponent
         }
     }
     return FloatArray(x.size) { index ->
@@ -32,17 +36,19 @@ private fun List<List<Player?>>.toFloatArraySingular(player: Player): FloatArray
     }
 }
 
-private fun List<List<Player?>>.toFloatArrayDual(player: Player): FloatArray {
+private fun List<List<Player?>>.toFloatArrayDual(player: Player, opponent: Float): FloatArray {
     val p = normalize(player).flatten().map { element ->
         when (element) {
             player -> 1.0f
-            else -> 0.0f
+            null -> 0.0f
+            else -> opponent
         }
     }
     val op = normalize(player).flatten().map { element ->
         when (element) {
             player.switch() -> 1.0f
-            else -> 0.0f
+            null -> 0.0f
+            else -> opponent
         }
     }
     val x = p.zip(op).flatMap { listOf(it.first, it.second) }
@@ -50,6 +56,14 @@ private fun List<List<Player?>>.toFloatArrayDual(player: Player): FloatArray {
     return FloatArray(x.size) { index ->
         x[index]
     }
+}
+
+private fun List<List<Player?>>.toFloatArray(player: Player, inputType: InputType): FloatArray = when (inputType) {
+    InputType.SingularMinus -> this.toFloatArraySingular(player, -1.0f)
+    InputType.SingularPlus -> this.toFloatArraySingular(player, 2.0f)
+    InputType.DualNeutral -> this.toFloatArrayDual(player, 0.0f)
+    InputType.DualMinus -> this.toFloatArrayDual(player, -1.0f)
+    InputType.DualPlus -> this.toFloatArrayDual(player, 2.0f)
 }
 
 private fun List<List<Player?>>.normalize(player: Player): List<List<Player?>> = map {
@@ -62,13 +76,9 @@ private fun List<List<Player?>>.normalize(player: Player): List<List<Player?>> =
     }
 }
 
-fun List<Move>.toDataset(player: Player, inputSingular: Boolean): Dataset = OnHeapDataset.create(
+fun List<Move>.toDataset(player: Player, inputType: InputType): Dataset = OnHeapDataset.create(
     map { move ->
-        if (inputSingular) {
-            move.field.toFloatArraySingular(player)
-        } else {
-            move.field.toFloatArrayDual(player)
-        }
+        move.field.toFloatArray(player, inputType)
     }.toTypedArray(),
     run {
         val x = map { move ->
@@ -81,6 +91,7 @@ fun List<Move>.toDataset(player: Player, inputSingular: Boolean): Dataset = OnHe
     }
 )
 
+
 private fun Layer.name(): String = when (this) {
     is Input -> "Input(${packedDims[2]})"
     is BatchNorm -> "BatchNorm()"
@@ -92,31 +103,34 @@ private fun Layer.name(): String = when (this) {
     else -> throw Exception("unhandled Layer")
 }
 
-private fun Sequential.isInputSingular() = this.inputDimensions[2] == 1L
+@Serializable
+data class AdditionalInfo(
+    val inputType: InputType
+)
+
+// TODO move to some common place
+val json = Json {
+    ignoreUnknownKeys = true
+    classDiscriminator = "class"
+}
 
 abstract class NeuralAI : AI(null) {
     abstract val brain: Sequential
+    abstract val inputType: InputType
 
     abstract override val name: String
 
     val epochs = 10
 
+
     fun nextMoveRanked(
         field: List<List<Player?>>,
         availableColumns: List<Int>,
         player: Player
-    ): List<Pair<Int, Float>> {
-        val floatArray = if (brain.isInputSingular()) {
-            field.toFloatArraySingular(player)
-        } else {
-            field.toFloatArrayDual(player)
-        }
-
-        return brain.predictSoftly(floatArray)
-            .mapIndexed { column, estimate -> column to estimate }
-            .filter { availableColumns.contains(it.first) }
-            .sortedByDescending { it.second }
-    }
+    ): List<Pair<Int, Float>> = brain.predictSoftly(field.toFloatArray(player, inputType))
+        .mapIndexed { column, estimate -> column to estimate }
+        .filter { availableColumns.contains(it.first) }
+        .sortedByDescending { it.second }
 
     override fun nextMove(field: List<List<Player?>>, availableColumns: List<Int>, player: Player): Int =
         nextMoveRanked(field, availableColumns, player)
@@ -126,7 +140,7 @@ abstract class NeuralAI : AI(null) {
     fun train(list: List<Move>): Boolean {
         return try {
             brain.fit(
-                list.toDataset(Player.FirstPlayer, brain.isInputSingular()),
+                list.toDataset(Player.FirstPlayer, inputType),
                 epochs,
                 1000
             )
@@ -140,7 +154,7 @@ abstract class NeuralAI : AI(null) {
 
     fun evaluate(list: List<Move>): Double =
         brain.evaluate(
-            list.toDataset(Player.FirstPlayer, brain.isInputSingular())
+            list.toDataset(Player.FirstPlayer, inputType)
         ).lossValue
 
     fun info() =
@@ -149,8 +163,7 @@ abstract class NeuralAI : AI(null) {
     fun paramsCount() = brain.summary().totalParamsCount
 
     fun store(path: String, name: String) {
-        val baseDirectory = "${System.getProperty("user.dir")}/$path"
-        val directory = File("$baseDirectory/$name")
+        val directory = File("${System.getProperty("user.dir")}/$path/$name")
         if (!directory.isDirectory) {
             directory.mkdir()
         }
@@ -159,6 +172,17 @@ abstract class NeuralAI : AI(null) {
             SavingFormat.JSON_CONFIG_CUSTOM_VARIABLES,
             true,
             WritingMode.OVERRIDE,
+        )
+        val additional = File(directory.path + "/additionalInfo.json")
+        if (additional.exists()) {
+            additional.delete()
+        }
+        additional.createNewFile()
+        additional.writeText(
+            json.encodeToString(
+                AdditionalInfo.serializer(),
+                AdditionalInfo(inputType)
+            )
         )
     }
 }

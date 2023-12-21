@@ -1,5 +1,25 @@
 package connect4.game
 
+enum class InputType {
+    SingularMinus,
+    SingularPlus,
+    DualNeutral,
+    DualMinus,
+    DualPlus;
+    fun toShortString() = when(this) {
+        SingularMinus -> "T"
+        DualNeutral -> "F"
+        SingularPlus -> "A"
+        DualMinus -> "B"
+        DualPlus -> "C"
+    }
+
+    companion object {
+        fun fromShortString(short: String) =
+            InputType.entries.find { it.toShortString() == short }!!
+    }
+}
+
 enum class AIChoice {
     Simple,
     Medium,

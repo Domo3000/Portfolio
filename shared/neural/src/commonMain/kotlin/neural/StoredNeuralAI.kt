@@ -1,19 +1,15 @@
 package neural
 
-import kotlinx.serialization.json.Json
+import connect4.game.InputType
 import org.jetbrains.kotlinx.dl.api.core.Sequential
 import org.jetbrains.kotlinx.dl.api.core.loss.Losses
 import org.jetbrains.kotlinx.dl.api.core.metric.Metrics
 import org.jetbrains.kotlinx.dl.api.core.optimizer.Adam
 import java.io.File
 
-private val json = Json {
-    ignoreUnknownKeys = true
-    classDiscriminator = "class"
-}
-
 class StoredNeuralAI(
     name: String,
+    override val inputType: InputType,
     override val brain: Sequential
 ) : NeuralAI() {
     override val name: String = "StoredNeural($name)"
@@ -26,8 +22,16 @@ class StoredNeuralAI(
             stored.compile(Adam(), Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS, Metrics.ACCURACY)
             stored.loadWeights(neuralDirectory, true)
             val additionalFile = File(neuralDirectory.path + "/additionalInfo.json")
-            val additionalInfo = json.decodeFromString(AdditionalInfo.serializer(), additionalFile.readText())
-            return StoredNeuralAI(name, stored)
+            val additionalInfo = if(additionalFile.exists()) {
+                json.decodeFromString(AdditionalInfo.serializer(), additionalFile.readText())
+            } else {
+                if(stored.inputLayer.packedDims[2] == 1L) {
+                    AdditionalInfo(InputType.SingularMinus)
+                } else {
+                    AdditionalInfo(InputType.DualNeutral)
+                }
+            }
+            return StoredNeuralAI(path, additionalInfo.inputType, stored)
         }
     }
 }

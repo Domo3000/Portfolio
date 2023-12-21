@@ -1,6 +1,7 @@
 package about
 
 import Requests
+import about.explanation.Explanation
 import canvas.ExternalCanvas
 import connect4.game.TrainingGroups
 import connect4.messages.Connect4Messages
@@ -8,7 +9,7 @@ import connect4.messages.TrainingResultMessage
 import connect4.messages.TrainingResultsMessage
 import react.*
 import util.Button
-import util.ColoredTrainingGroups
+import util.TrainingGroupColors
 import util.buttonRow
 import web.cssom.NamedColor
 
@@ -17,10 +18,10 @@ const val pow = 3.0
 const val scale = 1.16
 
 enum class Label {
-    InputOutput,
+    Input,
+    Output,
     BatchNorm,
-    ValidLayer,
-    SameLayer,
+    MixedLayer,
     LongTraining
 }
 
@@ -34,23 +35,22 @@ class Connect4About : ExternalCanvas() {
             val (currentMode, setCurrentMode) = useState<Pair<Label, TrainingView>?>(null)
 
             val (inputTrainingHistory, setInputTrainingHistory) = useState<List<TrainingResultMessage>>(emptyList())
-            val (batchNormTrainingHistory, setBatchNormTrainingHistory) = useState<List<TrainingResultMessage>>(emptyList())
-
-            val (validLayerTrainingHistory, setValidLayerTrainingHistory) = useState<List<TrainingResultMessage>>(
+            val (outputTrainingHistory, setOutputTrainingHistory) = useState<List<TrainingResultMessage>>(emptyList())
+            val (batchNormTrainingHistory, setBatchNormTrainingHistory) = useState<List<TrainingResultMessage>>(
                 emptyList()
             )
 
-            val (sameLayerTrainingHistory, setSameLayerTrainingHistory) = useState<List<TrainingResultMessage>>(
+            val (mixedLayerTrainingHistory, setMixedLayerTrainingHistory) = useState<List<TrainingResultMessage>>(
                 emptyList()
             )
 
             val (longTrainingHistory, setLongTrainingHistory) = useState<List<TrainingResultMessage>>(emptyList())
 
             val labels = listOfNotNull(
-                inputTrainingHistory.optionalLabel(Label.InputOutput),
+                inputTrainingHistory.optionalLabel(Label.Input),
+                outputTrainingHistory.optionalLabel(Label.Output),
                 batchNormTrainingHistory.optionalLabel(Label.BatchNorm),
-                validLayerTrainingHistory.optionalLabel(Label.ValidLayer),
-                sameLayerTrainingHistory.optionalLabel(Label.SameLayer),
+                mixedLayerTrainingHistory.optionalLabel(Label.MixedLayer),
                 longTrainingHistory.optionalLabel(Label.LongTraining),
             )
 
@@ -69,60 +69,62 @@ class Connect4About : ExternalCanvas() {
             }
 
             currentMode?.let {
-                when (currentMode.first) {
-                    Label.InputOutput -> TrainingHistory {
-                        results = inputTrainingHistory
-                        group = ColoredTrainingGroups.inputOutputExperiment
-                        view = currentMode.second
-                    }
+                val (trainingHistory, trainingGroup, trainingColor) = when (currentMode.first) {
+                    Label.Input -> Triple(
+                        inputTrainingHistory,
+                        TrainingGroups.inputExperiment,
+                        TrainingGroupColors.inputExperiment
+                    )
 
-                    Label.BatchNorm -> TrainingHistory {
-                        results = batchNormTrainingHistory
-                        group = ColoredTrainingGroups.batchNormExperiment
-                        view = currentMode.second
-                    }
+                    Label.Output -> Triple(
+                        outputTrainingHistory,
+                        TrainingGroups.outputExperiment,
+                        TrainingGroupColors.outputExperiment
+                    )
 
-                    Label.ValidLayer -> TrainingHistory {
-                        results = validLayerTrainingHistory
-                        group = ColoredTrainingGroups.mixedLayerExperiment(TrainingGroups.validLayerExperiment)
-                        view = currentMode.second
-                    }
+                    Label.BatchNorm -> Triple(
+                        batchNormTrainingHistory,
+                        TrainingGroups.batchNormExperiment,
+                        TrainingGroupColors.batchNormExperiment
+                    )
 
-                    Label.SameLayer -> TrainingHistory {
-                        results = sameLayerTrainingHistory
-                        group = ColoredTrainingGroups.mixedLayerExperiment(TrainingGroups.sameLayerExperiment)
-                        view = currentMode.second
-                    }
+                    Label.MixedLayer -> Triple(
+                        mixedLayerTrainingHistory,
+                        TrainingGroups.mixedLayerExperiment,
+                        TrainingGroupColors.mixedLayerExperiment
+                    )
 
-                    Label.LongTraining -> TrainingHistory {
-                        results = longTrainingHistory
-                        group = ColoredTrainingGroups.longTrainingExperiment
+                    Label.LongTraining -> Triple(
+                        longTrainingHistory,
+                        TrainingGroups.longTrainingExperiment,
+                        TrainingGroupColors.longTrainingExperiment
+                    )
+                }
+
+                TrainingHistory {
+                        results = trainingHistory
+                        group = trainingGroup
+                        color = trainingColor
                         view = currentMode.second
-                    }
+                }
+
+                Explanation {
+                    group = trainingGroup
                 }
             }
 
-            /*
-            // TODO (Long)CombinationTrainingExplanation and different SmallTrainingExplanation
-            Explanation {
-                group = ColoredTrainingGroups.paddingExperiment
-            }
-
-             */
-
-            // TODO default to MixedLayer later
-            useEffect(validLayerTrainingHistory) {
-                if (validLayerTrainingHistory.isNotEmpty()) {
-                    setCurrentMode(Label.ValidLayer to TrainingView.History)
+            useEffect(mixedLayerTrainingHistory) {
+                if (mixedLayerTrainingHistory.isNotEmpty()) {
+                    setCurrentMode(Label.MixedLayer to TrainingView.History)
                 }
             }
 
             useEffectOnce {
                 listOf(
-                    Label.InputOutput to setInputTrainingHistory,
+                    Label.Input to setInputTrainingHistory,
+                    Label.Output to setOutputTrainingHistory,
                     Label.BatchNorm to setBatchNormTrainingHistory,
-                    Label.ValidLayer to setValidLayerTrainingHistory,
-                    Label.SameLayer to setSameLayerTrainingHistory,
+                    Label.MixedLayer to setMixedLayerTrainingHistory,
                     Label.LongTraining to setLongTrainingHistory
                 ).forEach { (label, stateSetter) ->
                     val name = label.toString().replaceFirstChar { it.lowercase() }

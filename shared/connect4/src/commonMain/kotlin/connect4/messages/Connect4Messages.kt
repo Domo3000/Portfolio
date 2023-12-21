@@ -72,21 +72,21 @@ data class ConvLayerDescription(
 
 @Serializable
 data class NeuralDescription(
-    val inputSingular: Boolean,
+    val inputType: InputType,
     val batchNorm: Boolean,
     val conv: ConvLayerDescription,
     val dense: DenseLayerDescription,
     val outputLayer: OutputActivation
 ) : Connect4Message() {
     fun toShortString(): String =
-        "${inputSingular.toShortString()}${batchNorm.toShortString()}-${conv.toShortString()}-${dense.toShortString()}-${outputLayer.toShortString()}"
+        "${inputType.toShortString()}${batchNorm.toShortString()}-${conv.toShortString()}-${dense.toShortString()}-${outputLayer.toShortString()}"
 
     companion object {
         fun fromShortString(short: String): NeuralDescription {
             val parts = short.split("-")
 
             return NeuralDescription(
-                parts[0][0] == 'T',
+                InputType.fromShortString("${parts[0][0]}"),
                 parts[0][1] == 'T',
                 ConvLayerDescription.fromShortString(parts[1]),
                 DenseLayerDescription.fromShortString(parts[2]),

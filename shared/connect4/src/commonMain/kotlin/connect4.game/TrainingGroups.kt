@@ -4,7 +4,7 @@ import connect4.messages.NeuralDescription
 
 sealed interface TrainingGroup {
     val max: Int
-    val input: List<Boolean>
+    val input: List<InputType>
     val batchNorm: List<Boolean>
     val padding: List<Padding>
     val convLayerSize: List<LayerSize>
@@ -13,7 +13,7 @@ sealed interface TrainingGroup {
     fun specificContains(description: NeuralDescription): Boolean
 
     fun commonContains(description: NeuralDescription): Boolean {
-        if (!input.contains(description.inputSingular)) return false
+        if (!input.contains(description.inputType)) return false
 
         if (!batchNorm.contains(description.batchNorm)) return false
 
@@ -33,7 +33,7 @@ sealed interface TrainingGroup {
 
 data class CombinationGroup(
     override val max: Int,
-    override val input: List<Boolean>,
+    override val input: List<InputType>,
     override val batchNorm: List<Boolean>,
     override val padding: List<Padding>,
     override val convLayerSize: List<LayerSize>,
@@ -53,7 +53,7 @@ data class CombinationGroup(
 
 data class SameActivationGroup(
     override val max: Int,
-    override val input: List<Boolean>,
+    override val input: List<InputType>,
     override val batchNorm: List<Boolean>,
     override val padding: List<Padding>,
     override val convLayerSize: List<LayerSize>,
@@ -77,7 +77,7 @@ data class SameActivationGroup(
 
 data class SameLayerGroup(
     override val max: Int,
-    override val input: List<Boolean>,
+    override val input: List<InputType>,
     override val batchNorm: List<Boolean>,
     override val padding: List<Padding>,
     override val convLayerSize: List<LayerSize>,
@@ -94,159 +94,21 @@ data class SameLayerGroup(
 }
 
 object TrainingGroups {
-    /*
-        val inputOutputExperiment = ComplexGroup(
-            304,
-            listOf(true, false),
-            listOf(true),
-            listOf(Padding.Valid),
-            Triple(false, false, true),
-            LayerSize.entries,
-            Activation.entries,
-            OutputActivation.entries
-        )
-
-        val batchNormExperiment = ComplexGroup(
-            504,
-            listOf(false),
-            listOf(true, false),
-            Padding.entries,
-            Triple(true, true, true),
-            LayerSize.entries.filterNot { it == LayerSize.None },
-            Activation.entries,
-            listOf(OutputActivation.Linear)
-        )
-
-        val validPaddingExperiment = LimitedCombinationGroup(
-            304,
-            listOf(false),
-            listOf(true, false),
-            listOf(Padding.Valid),
-            LayerSize.entries.filterNot { it == LayerSize.None },
-            Activation.entries,
-            OutputActivation.entries
-        )
-
-        val samePaddingExperiment = LimitedCombinationGroup(
-            304,
-            listOf(false),
-            listOf(true, false),
-            listOf(Padding.Same),
-            LayerSize.entries.filterNot { it == LayerSize.None },
-            Activation.entries,
-            OutputActivation.entries
-        )
-
-        val mixedLayerExperiment = CombinationGroup(
-            304,
-            listOf(false),
-            listOf(false),
-            listOf(Padding.Valid),
-            LayerSize.entries,
-            Activation.entries,
-            LayerSize.entries,
-            Activation.entries,
-            listOf(OutputActivation.Linear)
-        )
-
-        val validLayerExperiment = CombinationGroup(
-            304,
-            listOf(false),
-            listOf(false),
-            listOf(Padding.Valid),
-            LayerSize.entries,
-            Activation.entries,
-            LayerSize.entries,
-            Activation.entries,
-            listOf(OutputActivation.Linear)
-        )
-
-        val sameLayerExperiment = CombinationGroup(
-            204,
-            listOf(false),
-            listOf(false),
-            listOf(Padding.Same),
-            LayerSize.entries,
-            listOf(Activation.LiSHT, Activation.Mish, Activation.Relu),
-            LayerSize.entries,
-            listOf(Activation.LiSHT, Activation.Mish, Activation.Relu),
-            listOf(OutputActivation.Linear)
-        )
-
-
-     */
-    /*
-    val longTrainingExperiment = LimitedCombinationGroup(
-        1004,
-        listOf(false),
+    val inputExperiment = SameLayerGroup(
+        304,
+        InputType.entries,
         listOf(false),
         Padding.entries,
-        LayerSize.entries,
-        listOf(Activation.LiSHT, Activation.Mish, Activation.Relu),
-        listOf(OutputActivation.Linear, OutputActivation.Relu, OutputActivation.Tanh)
-    )
-
-     */
-
-    /*
-        val longTrainingExperiment = ComplexGroup(
-            1004,
-            listOf(false),
-            listOf(false),
-            Padding.entries,
-            Triple(true, true, true),
-            LayerSize.entries,
-            listOf(Activation.LiSHT, Activation.Mish, Activation.Relu),
-            listOf(OutputActivation.Linear, OutputActivation.Relu, OutputActivation.Tanh)
-        )
-
-
-     */
-    /*
-    val validPaddingExperiment = CombinationGroup(
-        304,
-        listOf(false),
-        listOf(true),
-        listOf(Padding.Valid),
-        LayerSize.entries.filterNot { it == LayerSize.None },
-        Activation.entries,
         LayerSize.entries,
         Activation.entries,
         listOf(OutputActivation.Linear)
     )
 
-    val allowedLongExperiment = listOf(
-        ConvLayerDescription(
-            size = LayerSize.Giant, padding = Padding.Valid, batchNorm = true
-        ), ConvLayerDescription(
-            size = LayerSize.Large, padding = Padding.Valid, batchNorm = true
-        ), ConvLayerDescription(
-            size = LayerSize.Medium, padding = Padding.Valid, batchNorm = true
-        ), ConvLayerDescription(
-            size = LayerSize.Small, padding = Padding.Valid, batchNorm = true
-        ), ConvLayerDescription(
-            size = LayerSize.Medium, padding = Padding.Same, batchNorm = false
-        )
-    )
-
-    // TODO F-LRSF-LR-L, F-GRSF-GR-L, F-GRST-GR-L, F-LRST-GR-L, F-LRSF-GR-L
-    // and whatevers better BN/N and all valid/Conv combinations
-    // TODO add: Small Valid BN
-    val longExperiment = SpecificGroup(
-        1004,
-        allowedLongExperiment,
-        listOf(Activation.LiSHT, Activation.Relu),
-        listOf(LayerSize.Large, LayerSize.Giant),
-        listOf(Activation.LiSHT, Activation.Relu)
-    )
-
-     */
-
-    val inputOutputExperiment = SameLayerGroup(
+    val outputExperiment = SameLayerGroup(
         304,
-        listOf(true, false),
-        listOf(true),
-        listOf(Padding.Valid),
+        listOf(InputType.DualNeutral),
+        listOf(false),
+        Padding.entries,
         LayerSize.entries,
         Activation.entries,
         OutputActivation.entries
@@ -254,7 +116,7 @@ object TrainingGroups {
 
     val batchNormExperiment = CombinationGroup(
         504,
-        listOf(false),
+        listOf(InputType.DualNeutral),
         listOf(true, false),
         Padding.entries,
         LayerSize.entries,
@@ -264,9 +126,9 @@ object TrainingGroups {
         listOf(OutputActivation.Linear)
     )
 
-    val validLayerExperiment = CombinationGroup(
+    val mixedLayerExperiment = CombinationGroup(
         304,
-        listOf(false),
+        listOf(InputType.DualNeutral),
         listOf(false),
         listOf(Padding.Valid),
         LayerSize.entries,
@@ -278,7 +140,7 @@ object TrainingGroups {
 
     val sameLayerExperiment = CombinationGroup(
         204,
-        listOf(false),
+        listOf(InputType.DualNeutral),
         listOf(false),
         listOf(Padding.Same),
         LayerSize.entries,
@@ -290,19 +152,20 @@ object TrainingGroups {
 
     val longTrainingExperiment = SameActivationGroup(
         1004,
-        listOf(false),
+        listOf(InputType.DualNeutral),
         listOf(false),
         Padding.entries,
         LayerSize.entries,
-        listOf(Activation.LiSHT, Activation.Mish, Activation.Relu),
+        Activation.entries,
         LayerSize.entries,
         listOf(OutputActivation.Linear)
     )
 
     val all = listOf(
-        inputOutputExperiment,
+        inputExperiment,
+        outputExperiment,
         batchNormExperiment,
-        validLayerExperiment,
+        mixedLayerExperiment,
         sameLayerExperiment,
         longTrainingExperiment
     )

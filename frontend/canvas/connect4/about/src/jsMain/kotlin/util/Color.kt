@@ -3,8 +3,6 @@ package util
 import about.util.ColorValue
 import about.util.LimitedDescription
 import about.util.colorValue
-import connect4.game.TrainingGroup
-import connect4.game.TrainingGroups
 import connect4.messages.NeuralDescription
 import web.cssom.Color
 import web.cssom.rgb
@@ -19,9 +17,9 @@ fun ColorValue.rgb(): Color {
     return rgb(r, g, b)
 }
 
-fun NeuralDescription.rgb(group: ColoredTrainingGroup) = group.colorValue(
+fun NeuralDescription.rgb(group: TrainingGroupColor) = group(
     LimitedDescription(
-        this.inputSingular,
+        this.inputType,
         this.batchNorm,
         this.conv.padding,
         this.conv.size,
@@ -32,23 +30,29 @@ fun NeuralDescription.rgb(group: ColoredTrainingGroup) = group.colorValue(
     )
 ).rgb()
 
-data class ColoredTrainingGroup(val trainingGroup: TrainingGroup, val colorValue: (LimitedDescription) -> ColorValue)
+typealias TrainingGroupColor = (LimitedDescription) -> ColorValue
 
-object ColoredTrainingGroups {
-    val inputOutputExperiment = ColoredTrainingGroup(
-        TrainingGroups.inputOutputExperiment
-    ) { description ->
+object TrainingGroupColors {
+    val inputExperiment: TrainingGroupColor = { description ->
+        ColorValue(
+            description.convLayerSize.colorValue(),
+            description.inputType.colorValue(),
+            description.convLayerActivation.colorValue(),
+            description.padding.colorValue()
+        )
+    }
+
+    val outputExperiment: TrainingGroupColor = { description ->
         ColorValue(
             description.convLayerSize.colorValue(),
             description.output.colorValue(),
             description.convLayerActivation.colorValue(),
-            description.input.colorValue()
+            description.padding.colorValue()
         )
     }
 
-    val batchNormExperiment = ColoredTrainingGroup(
-        TrainingGroups.batchNormExperiment
-    ) { description ->
+
+    val batchNormExperiment: TrainingGroupColor = { description ->
         ColorValue(
             description.convLayerSize.colorValue(),
             description.denseLayerSize.colorValue(),
@@ -57,9 +61,7 @@ object ColoredTrainingGroups {
         )
     }
 
-    fun mixedLayerExperiment(trainingGroup: TrainingGroup) = ColoredTrainingGroup(
-        trainingGroup
-    ) { description ->
+    val mixedLayerExperiment: TrainingGroupColor = { description ->
         ColorValue(
             description.convLayerSize.colorValue(),
             description.denseLayerSize.colorValue(),
@@ -69,9 +71,7 @@ object ColoredTrainingGroups {
     }
 
 
-    val longTrainingExperiment = ColoredTrainingGroup(
-        TrainingGroups.longTrainingExperiment
-    ) { description ->
+    val longTrainingExperiment: TrainingGroupColor = { description ->
         ColorValue(
             description.convLayerSize.colorValue(),
             description.denseLayerSize.colorValue(),
@@ -79,37 +79,4 @@ object ColoredTrainingGroups {
             description.padding.colorValue()
         )
     }
-
-    /*
-    val validPaddingExperiment = ColoredTrainingGroup(
-        TrainingGroups.validPaddingExperiment
-    ) { description ->
-        ColorValue(
-            description.convLayerSize.colorValue(),
-            description.convLayerActivation.colorValue(),
-            description.denseLayerSize.colorValue(),
-            description.denseLayerActivation.colorValue()
-        )
-    }
-
-    val longExperiment = ColoredTrainingGroup(
-        TrainingGroups.longExperiment
-    ) { description ->
-        val allowedIndex = TrainingGroups.allowedLongExperiment.mapIndexed { index, convLayerDescription ->
-            index to (
-                    convLayerDescription.size == description.convLayerSize &&
-                            convLayerDescription.padding == description.padding &&
-                            convLayerDescription.batchNorm == description.batchNorm
-                    )
-        }.filter { it.second }.map { it.first }.firstOrNull() ?: (TrainingGroups.allowedLongExperiment.size / 2)
-
-        ColorValue(
-            -allowedIndex + (TrainingGroups.allowedLongExperiment.size / 2),
-            description.convLayerActivation.colorValue(),
-            description.denseLayerSize.colorValue(),
-            description.denseLayerActivation.colorValue()
-        )
-    }
-
-     */
 }

@@ -1,41 +1,63 @@
 package about.explanation
 
-import connect4.game.CombinationGroup
-import emotion.react.css
+import connect4.game.InputType
+import connect4.game.TrainingGroup
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML
-import util.ColoredTrainingGroup
-import web.cssom.Clear
+import react.useState
 
 external interface ExplanationProps : Props {
-    var group: ColoredTrainingGroup
+    var group: TrainingGroup // TODO remove, always show all
 }
 
-val Explanation = FC<ExplanationProps> { props ->
-    val shown: List<Triple<String, FC<ExplanationProps>, (CombinationGroup) -> Boolean>> =
-        listOf<Triple<String, FC<ExplanationProps>, (CombinationGroup) -> Boolean>>(
-            Triple("Input Layer", ConvLayerExplanation) { group -> group.input.size > 1 },
-            Triple("Convolutional Layers", ConvLayerExplanation) { true },
-            Triple("Dense Layers", ConvLayerExplanation) { true },
-            Triple("Activation Functions", ActivationExplanations) { group ->
-                group.convLayerActivation.size > 1 || group.denseLayerActivation.size > 1
-            },
-        ).filter { it.third(props.group.trainingGroup as CombinationGroup) } // TODO fix
+val Explanation = FC<ExplanationProps> {
+    val (shownInput, setShownInput) = useState(InputType.entries[2])
 
-    shown.forEach {
-        ReactHTML.details {
-            css {
-                clear = Clear.left
+    /*
+     TODO this could be refactored
+     decide if they should be filtered by third or if it should just be a Pair
+     */
+    /*
+    val shown: List<Triple<String, FC<ExplanationProps>, (TrainingGroup) -> Boolean>> =
+        listOf(
+            Triple("Input Layer", InputExplanation) { group -> group.input.size > 1 },
+            Triple("BatchNorm", ConvLayerExplanation) { group -> group.batchNorm.size > 1 },
+            Triple("Padding", ConvLayerExplanation) { group -> group.padding.size > 1 }, // TODO move to Conv
+            Triple("Convolutional Layers", ConvLayerExplanation) { group -> group.convLayerSize.size > 1 },
+            Triple("Dense Layers", DenseLayerExplanation) { group -> group.convLayerSize.size > 1 },
+            Triple("Activation Functions", ActivationExplanations) { group -> group.convLayerActivation.size > 1 },
+            Triple("Output Activation Functions", OutputActivationExplanations) { group -> group.output.size > 1 },
+        )
+
+     */
+
+    listOf(
+        "Input Layer" to {
+            InputExplanation {
+                this.shownInput = shownInput
+                this.setShownInput = { setShownInput(it) }
             }
-            ReactHTML.summary {
-                ReactHTML.strong {
-                    +it.first
-                }
+        },
+        "Convolutional Layers" to {
+            ConvLayerExplanation {
+                //input = shownInput
+                //batchNorm = true
+                //padding = Padding.Valid
             }
-            it.second {
-                group = props.group
+        },
+        "Dense Layers" to {
+            DenseLayerExplanation {
+                //inputs = 1000
+                //batchNorm = false
             }
+        }
+    ).forEach {
+        ReactHTML.div {
+            ReactHTML.h3 {
+                +it.first
+            }
+            it.second()
         }
     }
 }

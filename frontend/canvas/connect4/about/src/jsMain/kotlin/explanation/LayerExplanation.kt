@@ -3,25 +3,39 @@ package about.explanation
 import about.util.LimitedDescription
 import connect4.game.LayerSize
 import emotion.react.css
-import props.hslColor
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML
 import react.useState
 import util.Button
+import util.TrainingGroupColors
 import util.buttonRow
 import util.rgb
 import web.cssom.*
 
+private data class Input(val rows: Int, val columns: Int, val dimensions: Int)
+
 sealed interface Layer
 
 private data object None : Layer
-private data object Input : Layer
 private data object Output : Layer
 private data object BatchNorm : Layer
 private data object Flatten : Layer
-private data class Conv(val filters: Int, val size: Int) : Layer
+private data class Conv(val size: Int, val filters: Int) : Layer
 private data class Dense(val size: Int) : Layer
+
+/* TODO cleanup
+sealed interface LayerType {
+    val batchNorm: Boolean
+}
+private data class ConvLayer(override val batchNorm: Boolean, val inputType: InputType, val padding: Padding) : LayerType
+private data class DenseLayer(override val batchNorm: Boolean, val inputs: Int) : LayerType
+ */
+
+private enum class LayerType {
+    ConvLayerType,
+    DenseLayerType
+}
 
 private external interface LayerExplanationProps : Props {
     var texts: List<String>
@@ -54,172 +68,83 @@ private val LayerExplanation = FC<LayerExplanationProps> { props ->
     }
 }
 
-external interface LayerExplanationRowProps : Props {
-    var conv: Boolean
+private external interface LayerExplanationRowProps : Props {
+    var layerType: LayerType
 }
 
-val LayerExplanationRow = FC<LayerExplanationRowProps> { props ->
+private val LayerExplanationRow = FC<LayerExplanationRowProps> { props ->
     val (shownLayer, setShownLayer) = useState(LayerSize.entries[2])
 
-    /*
-    val color = { layer: LayerSize ->
-        if (props.conv) {
-            CombinationNeuralDescription(
-                LayerDescription(layer, Activation.neutral),
-                LayerDescription(LayerSize.neutral, Activation.neutral)
-            ).color()
-        } else {
-            CombinationNeuralDescription(
-                LayerDescription(LayerSize.neutral, Activation.neutral),
-                LayerDescription(layer, Activation.neutral)
-            ).color()
-        }
-    }
-
-     */
-
-    val layers = if (props.conv) {
+    val layers = if (props.layerType == LayerType.ConvLayerType) {
         when (shownLayer) {
             LayerSize.None -> listOf(None)
             LayerSize.Small -> listOf(
-                Conv(64, 4)
+                Conv(4, 32)
             )
 
             LayerSize.Medium -> listOf(
-                Conv(64, 4),
-                Conv(64, 3)
+                Conv(4, 32),
+                Conv(4, 32)
             )
 
             LayerSize.Large -> listOf(
-                Conv(64, 4),
-                BatchNorm,
-                Conv(64, 4)
+                Conv(4, 64),
+                Conv(3, 64)
             )
 
             LayerSize.Giant -> listOf(
-                Conv(64, 4),
-                Conv(64, 3),
-                Conv(64, 2),
+                Conv(4, 64),
+                Conv(2, 64),
+                Conv(2, 64),
             )
         }
     } else {
         when (shownLayer) {
             LayerSize.None -> listOf(None)
             LayerSize.Small -> listOf(Dense(70))
-            LayerSize.Medium -> listOf(Dense(420))
-            LayerSize.Large -> listOf(Dense(210), Dense(210), Dense(210))
-            LayerSize.Giant -> listOf(
-                420,
-                350,
-                280,
-                210,
-                140
-            ).map { Dense(it) }
+            LayerSize.Medium -> listOf(Dense(350))
+            LayerSize.Large -> listOf(210, 210, 210).map { Dense(it) }
+            LayerSize.Giant -> listOf(420, 350, 280, 210, 140, 70).map { Dense(it) }
         }
     }
-
-    buttonRow {
-        buttons = LayerSize.entries.map { size ->
-            Button(
-                size.toShortString(),
-                180.hslColor(),
-                shownLayer == size
-            ) {
-                if (shownLayer != size) {
-                    setShownLayer(size)
-                }
-            }
-        }
-    }
-
-    ReactHTML.div {
-        ReactHTML.strong {
-            css {
-                width = 100.px
-                margin = Auto.auto
-            }
-            +shownLayer.name
-        }
-    }
-
-    ReactHTML.div {
-        css {
-            height = 100.px
-            display = Display.flex
-            alignItems = AlignItems.center
-            justifyContent = JustifyContent.center
-        }
-        layers.forEach {
-            when (it) {
-                BatchNorm -> LayerExplanation {
-                    texts = listOf("BN")
-                    width = 20.px
-                }
-
-                is Conv -> LayerExplanation {
-                    texts = listOf("${it.filters}", "${it.size}x${it.size}")
-                }
-
-                is Dense -> LayerExplanation {
-                    texts = listOf("${it.size}")
-                    rounded = true
-                }
-
-                else -> {}
-            }
-        }
-    }
-}
-
-val ConvLayerExplanation = FC<ExplanationProps> { props ->
-    val (shownLayer, setShownLayer) = useState(LayerSize.entries[2])
 
     /*
-    val color = { layer: LayerSize ->
-        if (props.conv) {
-            CombinationNeuralDescription(
-                LayerDescription(layer, Activation.neutral),
-                LayerDescription(LayerSize.neutral, Activation.neutral)
-            ).color()
+    // TODO more functional solution
+    var previousOutput: Input? = null
+    val inputLayerPairs = layers.map { layer ->
+        val layerType = props.layerType
+        val input = if (layerType == LayerType.ConvLayerType && layer is Conv) {
+            val currentInput = (previousOutput ?: Input(6, 7, when(layerType.inputType) {
+                InputType.SingularMinus, InputType.SingularPlus -> 1
+                else -> 2
+            }))
+
+            // TODO if Valid Padding
+            previousOutput = Input(currentInput.rows - layer.size + 1, currentInput.columns - layer.size + 1, layer.filters)
+
+            currentInput
         } else {
-            CombinationNeuralDescription(
-                LayerDescription(LayerSize.neutral, Activation.neutral),
-                LayerDescription(layer, Activation.neutral)
-            ).color()
+            val input = previousOutput ?: Input((layerType as DenseLayer).inputs, 1, 1)
+
+            previousOutput = Input((layer as Dense).size, 1, 1)
+
+            input
         }
+
+        layer to input
     }
 
      */
 
-    val layers = when (shownLayer) {
-            LayerSize.None -> listOf(None)
-            LayerSize.Small -> listOf(
-                Conv(64, 4)
-            )
-
-            LayerSize.Medium -> listOf(
-                Conv(64, 4),
-                Conv(64, 3)
-            )
-
-            LayerSize.Large -> listOf(
-                Conv(64, 4),
-                BatchNorm,
-                Conv(64, 4)
-            )
-
-            LayerSize.Giant -> listOf(
-                Conv(64, 4),
-                Conv(64, 3),
-                Conv(64, 2),
-            )
-        }
-
     buttonRow {
         buttons = LayerSize.entries.map { size ->
             Button(
                 size.toShortString(),
-                props.group.colorValue(LimitedDescription(convLayerSize = size)).rgb(),
+                if (props.layerType == LayerType.ConvLayerType) {
+                    TrainingGroupColors.mixedLayerExperiment(LimitedDescription(convLayerSize = size)).rgb()
+                } else {
+                    TrainingGroupColors.mixedLayerExperiment(LimitedDescription(denseLayerSize = size)).rgb()
+                },
                 shownLayer == size
             ) {
                 if (shownLayer != size) {
@@ -246,24 +171,64 @@ val ConvLayerExplanation = FC<ExplanationProps> { props ->
             alignItems = AlignItems.center
             justifyContent = JustifyContent.center
         }
-        layers.forEach {
-            when (it) {
-                BatchNorm -> LayerExplanation {
-                    texts = listOf("BN")
-                    width = 20.px
-                }
-
+        // TODO also display how outputSize and such changes depending on Padding
+        // e.g. 6x7 -> 4x4 Valid -> 3x4 -> 2x2 Valid -> 2x3
+        layers.forEach { layer ->
+            when (layer) {
                 is Conv -> LayerExplanation {
-                    texts = listOf("${it.filters}", "${it.size}x${it.size}")
+                    //texts = listOf("Input: ${input.rows}x${input.columns}x${input.dimensions}", "Size: ${layer.size}x${layer.size}", "Filters: ${layer.filters}")
+                    texts = listOf("${layer.size}x${layer.size}", "${layer.filters}")
                 }
 
                 is Dense -> LayerExplanation {
-                    texts = listOf("${it.size}")
+                    //texts = listOf("Input: ${input.rows}", "${layer.size}")
+                    texts = listOf("${layer.size}")
                     rounded = true
                 }
 
                 else -> {}
             }
+
+            /*
+            if(props.layerType.batchNorm) {
+                LayerExplanation {
+                    texts = listOf("BN")
+                    width = 20.px
+                }
+            }
+
+             */
         }
+    }
+}
+
+/*
+external interface ConvLayerExplanationProps : Props {
+    var input: InputType
+    var batchNorm: Boolean
+    var padding: Padding
+}
+
+ */
+
+val ConvLayerExplanation = FC<Props> {
+    LayerExplanationRow {
+        //layerType = ConvLayer(props.batchNorm, props.input, props.padding)
+        layerType = LayerType.ConvLayerType
+    }
+}
+
+/*
+external interface DenseLayerExplanationProps : Props {
+    var inputs: Int
+    var batchNorm: Boolean
+}
+
+ */
+
+val DenseLayerExplanation = FC<Props> {
+    LayerExplanationRow {
+        //layerType = DenseLayer(props.batchNorm, props.inputs)
+        layerType = LayerType.DenseLayerType
     }
 }

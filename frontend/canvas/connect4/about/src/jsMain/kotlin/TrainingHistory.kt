@@ -15,7 +15,7 @@ import react.dom.html.ReactHTML
 import react.useEffect
 import react.useState
 import util.Button
-import util.ColoredTrainingGroup
+import util.TrainingGroupColor
 import util.buttonRow
 import util.rgb
 import web.canvas.CanvasRenderingContext2D
@@ -140,7 +140,8 @@ private val Legend = FC<LegendProps> { props ->
 
 external interface TrainingHistoryProps : Props {
     var results: List<TrainingResultMessage>
-    var group: ColoredTrainingGroup
+    var group: TrainingGroup
+    var color: TrainingGroupColor
     var view: TrainingView
 }
 
@@ -148,10 +149,9 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
     val (canvasElement, setCanvasElement) = useState<HTMLCanvasElement?>(null)
     val (renderingContext, setRenderingContext) = useState<CanvasRenderingContext2D?>(null)
     val (groupId, setGroupId) = useState(0)
-    val (shownInputSingular, setShownInputSingular) = useState<List<Boolean>>(emptyList())
+    val (shownInputType, setShownInputType) = useState<List<InputType>>(emptyList())
     val (shownBatchNorm, setShownBatchNorm) = useState<List<Boolean>>(emptyList())
     val (shownPadding, setShownPadding) = useState<List<Padding>>(emptyList())
-    val (shownModes, setShownModes) = useState(Triple(false, false, false))
     val (shownConvLayerSizes, setShownConvLayerSizes) = useState<List<LayerSize>>(emptyList())
     val (shownConvActivations, setShownConvActivations) = useState<List<Activation>>(emptyList())
     val (shownDenseLayerSizes, setShownDenseLayerSizes) = useState<List<LayerSize>>(emptyList())
@@ -160,10 +160,10 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
 
     fun filterResults(): List<TrainingResultMessage> {
 
-        val group = when (props.group.trainingGroup) {
+        val group = when (props.group) {
             is CombinationGroup -> CombinationGroup(
                 1,
-                shownInputSingular,
+                shownInputType,
                 shownBatchNorm,
                 shownPadding,
                 shownConvLayerSizes,
@@ -175,7 +175,7 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
 
             is SameLayerGroup -> SameLayerGroup(
                 1,
-                shownInputSingular,
+                shownInputType,
                 shownBatchNorm,
                 shownPadding,
                 shownConvLayerSizes,
@@ -185,7 +185,7 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
 
             is SameActivationGroup -> SameActivationGroup(
                 1,
-                shownInputSingular,
+                shownInputType,
                 shownBatchNorm,
                 shownPadding,
                 shownConvLayerSizes,
@@ -234,7 +234,7 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
                     renderingContext!!,
                     relativeX,
                     relativeY,
-                    description.rgb(props.group)
+                    description.rgb(props.color)
                 )
             }
     }
@@ -257,7 +257,7 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
                             renderingContext!!,
                             round,
                             count,
-                            description.rgb(props.group),
+                            description.rgb(props.color),
                             result,
                             previousResult
                         )
@@ -278,85 +278,76 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
         }
     }
 
-    val trainingGroup = props.group.trainingGroup
-    val colorValue = props.group.colorValue
+    if (groupId != props.group.hashCode()) {
+        setGroupId(props.group.hashCode())
+    }
 
-    if (groupId != trainingGroup.hashCode()) {
-        setGroupId(trainingGroup.hashCode())
+    ChoiceButtonRow<InputType>()() {
+        choices = props.group.input.map { "${it} Input" to it }
+        color = { props.color(LimitedDescription(inputType = it)).rgb() }
+        shown = shownInputType
+        setState = { setShownInputType(it) }
     }
 
     ChoiceButtonRow<Boolean>()() {
-        choices = trainingGroup.input.map {
-            when (it) {
-                true -> "1D Input" to it
-                false -> "2D Input" to it
-            }
-        }
-        color = { colorValue(LimitedDescription(input = it)).rgb() }
-        shown = shownInputSingular
-        setState = { setShownInputSingular(it) }
-    }
-
-    ChoiceButtonRow<Boolean>()() {
-        choices = trainingGroup.batchNorm.map {
+        choices = props.group.batchNorm.map {
             when (it) {
                 true -> "BatchNorm" to it
                 false -> "No" to it
             }
         }
-        color = { colorValue(LimitedDescription(batchNorm = it)).rgb() }
+        color = { props.color(LimitedDescription(batchNorm = it)).rgb() }
         shown = shownBatchNorm
         setState = { setShownBatchNorm(it) }
     }
 
     ChoiceButtonRow<Padding>()() {
-        choices = trainingGroup.padding.map {
+        choices = props.group.padding.map {
             when (it) {
                 Padding.Same -> "Same Padding" to it
                 Padding.Valid -> "Valid Padding" to it
             }
         }
-        color = { colorValue(LimitedDescription(padding = it)).rgb() }
+        color = { props.color(LimitedDescription(padding = it)).rgb() }
         shown = shownPadding
         setState = { setShownPadding(it) }
     }
 
     ChoiceButtonRow<LayerSize>()() {
-        choices = trainingGroup.convLayerSize.map { it.toString() to it }
-        color = { colorValue(LimitedDescription(convLayerSize = it)).rgb() }
+        choices = props.group.convLayerSize.map { it.toString() to it }
+        color = { props.color(LimitedDescription(convLayerSize = it)).rgb() }
         shown = shownConvLayerSizes
         setState = { setShownConvLayerSizes(it) }
     }
 
     ChoiceButtonRow<Activation>()() {
-        choices = trainingGroup.convLayerActivation.map { it.toString() to it }
-        color = { colorValue(LimitedDescription(convLayerActivation = it)).rgb() }
+        choices = props.group.convLayerActivation.map { it.toString() to it }
+        color = { props.color(LimitedDescription(convLayerActivation = it)).rgb() }
         shown = shownConvActivations
         setState = { setShownConvActivations(it) }
     }
 
-    when (trainingGroup) {
+    when (val group = props.group) {
         is CombinationGroup -> {
             ChoiceButtonRow<LayerSize>()() {
-                choices = trainingGroup.denseLayerSize.map { it.toString() to it }
-                color = { colorValue(LimitedDescription(denseLayerSize = it)).rgb() }
+                choices = group.denseLayerSize.map { it.toString() to it }
+                color = { props.color(LimitedDescription(denseLayerSize = it)).rgb() }
                 shown = shownDenseLayerSizes
                 setState = { setShownDenseLayerSizes(it) }
             }
 
             ChoiceButtonRow<Activation>()() {
-                choices = trainingGroup.denseLayerActivation.map { it.toString() to it }
-                color = { colorValue(LimitedDescription(denseLayerActivation = it)).rgb() }
+                choices = group.denseLayerActivation.map { it.toString() to it }
+                color = { props.color(LimitedDescription(denseLayerActivation = it)).rgb() }
                 shown = shownDenseActivations
                 setState = { setShownDenseActivations(it) }
             }
         }
 
-
         is SameActivationGroup -> {
             ChoiceButtonRow<LayerSize>()() {
-                choices = trainingGroup.denseLayerSize.map { it.toString() to it }
-                color = { colorValue(LimitedDescription(denseLayerSize = it)).rgb() }
+                choices = group.denseLayerSize.map { it.toString() to it }
+                color = { props.color(LimitedDescription(denseLayerSize = it)).rgb() }
                 shown = shownDenseLayerSizes
                 setState = { setShownDenseLayerSizes(it) }
             }
@@ -366,10 +357,10 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
     }
 
     ChoiceButtonRow<OutputActivation>()() {
-        choices = trainingGroup.output.map {
+        choices = props.group.output.map {
             "$it Output" to it
         }
-        color = { colorValue(LimitedDescription(output = it)).rgb() }
+        color = { props.color(LimitedDescription(output = it)).rgb() }
         shown = shownOutput
         setState = { setShownOutput(it) }
     }
@@ -401,8 +392,8 @@ val TrainingHistory = FC<TrainingHistoryProps> { props ->
         setCanvasElement(canvas)
         setRenderingContext(canvas.getContext(RenderingContextId.canvas) as CanvasRenderingContext2D)
 
-        props.group.trainingGroup.let { group ->
-            setShownInputSingular(group.input)
+        props.group.let { group ->
+            setShownInputType(group.input)
             setShownBatchNorm(group.batchNorm)
             setShownPadding(group.padding)
             setShownConvLayerSizes(group.convLayerSize)
